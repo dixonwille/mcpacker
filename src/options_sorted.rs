@@ -35,22 +35,22 @@ pub trait Sort<T: Ord> {
 }
 
 impl<T: Ord> Sort<T> for Vec<T> {
-    fn sort_unstable(&mut self){
+    fn sort_unstable(&mut self) {
         <[T]>::sort_unstable(self)
     }
-    fn len(&self) -> usize{
+    fn len(&self) -> usize {
         <[T]>::len(self)
     }
-    fn remove(&mut self, index: usize) -> T{
+    fn remove(&mut self, index: usize) -> T {
         Vec::remove(self, index)
     }
-    fn binary_search(&self, element: &T) -> Result<usize, usize>{
+    fn binary_search(&self, element: &T) -> Result<usize, usize> {
         <[T]>::binary_search(self, element)
     }
-    fn insert(&mut self, index: usize, element: T){
+    fn insert(&mut self, index: usize, element: T) {
         Vec::insert(self, index, element)
     }
-    fn append(&mut self, elements: &mut Self){
+    fn append(&mut self, elements: &mut Self) {
         Vec::append(self, elements)
     }
 }
@@ -61,36 +61,29 @@ pub trait OptionSort<I: Ord, T: Sort<I> + Default> {
     fn remove_element(&mut self, element: I) -> Option<I>;
 }
 
-
 impl<I: Ord, T: Sort<I> + Default> OptionSort<I, T> for Option<T> {
-    fn add(&mut self, element: I){
-        match self{
-            Some(elements) => {
-                elements.add(element)
-            },
+    fn add(&mut self, element: I) {
+        match self {
+            Some(elements) => elements.add(element),
             None => {
                 let mut elements: T = Default::default();
                 elements.add(element)
             }
         }
     }
-    fn add_multiple(&mut self, elements: &mut T){
+    fn add_multiple(&mut self, elements: &mut T) {
         match self {
-            Some(my_elements) => {
-                my_elements.add_multiple(elements)
-            },
+            Some(my_elements) => my_elements.add_multiple(elements),
             None => {
                 let mut my_elements: T = Default::default();
                 my_elements.add_multiple(elements)
             }
         }
     }
-    fn remove_element(&mut self, element: I) -> Option<I>{
+    fn remove_element(&mut self, element: I) -> Option<I> {
         match self {
-            Some(elements) => {
-                elements.remove_element(element)
-            },
-            None => None
+            Some(elements) => elements.remove_element(element),
+            None => None,
         }
     }
 }

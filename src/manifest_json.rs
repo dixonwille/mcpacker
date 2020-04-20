@@ -1,17 +1,25 @@
-use serde::{Serialize};
-use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
-use std::io::{Write};
+use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::io::{Read, Write};
 
-use crate::manifest::Manifest;
-
-#[allow(dead_code)]
 const MANIFEST_VERSION: u8 = 1;
-#[allow(dead_code)]
 const MANIFEST_TYPE: &str = "minecraftModpack";
-#[allow(dead_code)]
 const MANIFEST_OVERRIDES_FOLDER: &str = "overrides";
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct MinecraftInstance {
+    manifest: ManifestJson,
+}
+
+impl MinecraftInstance {
+    pub fn from_reader<R: Read>(reader: R) -> serde_json::Result<Self> {
+        serde_json::from_reader(reader)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct ManifestJson {
     minecraft: MinecraftJson,
     manifest_type: String,
@@ -24,58 +32,27 @@ pub struct ManifestJson {
 }
 
 impl ManifestJson {
-    #[allow(dead_code)]
-    pub fn from_manifest(man: &Manifest) -> Self {
-        let mut jman = ManifestJson {
-            name: man.name.clone(),
-            version: man.version.clone(),
-            author: man.author.clone(),
-            overrides: MANIFEST_OVERRIDES_FOLDER.to_string(),
-            manifest_type: MANIFEST_TYPE.to_string(),
-            manifest_version: MANIFEST_VERSION,
-            minecraft: MinecraftJson {
-                version: man.minecraft_version.clone(),
-                mod_loaders: vec![ModLoaderJson {
-                    id: format!("{}-{}", man.mod_loader, man.mod_loader_version),
-                    primary: true,
-                }],
-            },
-            files: None,
-        };
-        if let Some(mods) = man.get_mods() {
-            let mut files: Vec<FileJson> = Vec::with_capacity(mods.len());
-            for m in mods {
-                files.push(FileJson {
-                    project_id: m.project_id,
-                    file_id: m.file_id,
-                    required: true,
-                })
-            }
-            files.sort_unstable();
-            jman.files = Some(files)
-        };
-        jman
-    }
-    
-    #[allow(dead_code)]
     pub fn to_writer<W: Write>(&self, writer: W) -> serde_json::Result<()> {
         serde_json::to_writer(writer, &self)
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct MinecraftJson {
     version: String,
     mod_loaders: Vec<ModLoaderJson>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct ModLoaderJson {
     id: String,
     primary: bool,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 struct FileJson {
     project_id: u32,
     file_id: u32,
