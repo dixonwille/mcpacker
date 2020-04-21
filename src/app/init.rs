@@ -1,5 +1,9 @@
 use crate::app::*;
 use crate::errors::Result;
+use crate::manifest::*;
+use crate::manifest_json::*;
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Error, ErrorKind, stdin, stdout, Write};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -24,8 +28,63 @@ pub struct InitParams {
     loader_version: Option<String>,
 }
 
+impl InitParams {
+    fn prompt_for_manifest(&self) -> Result<Manifest> {
+        let mut man = Manifest::default();
+        man.mod_loader = self.loader.clone();
+        match &self.name {
+            Some(s) => man.name = s.clone(),
+            None => man.name = prompt_for_string("Pack Name")?,
+        };
+        match &self.author {
+            Some(s) => man.author = s.clone(),
+            None => man.author = prompt_for_string("Pack Author")?,
+        };
+        match &self.version {
+            Some(s) => man.version = s.clone(),
+            None => man.version = prompt_for_string("Pack Version")?,
+        };
+        match &self.mc_verison {
+            Some(s) => man.minecraft_version = s.clone(),
+            None => man.minecraft_version = prompt_for_string("Minecraft Version")?,
+        };
+        match &self.loader_version {
+            Some(s) => man.mod_loader_version = s.clone(),
+            None => man.mod_loader_version = prompt_for_string("Mod Loader Version")?,
+        };
+        Ok(man)
+    }
+}
+
 impl Run for InitParams {
     fn run(&self) -> Result<()> {
+        if manifest_exists() {
+            return Err(Error::new(ErrorKind::AlreadyExists, format!("{} already exists", MANIFEST_FILE)).into())
+        }
+        let manifest: Manifest;
+        if minecraft_instance_exists() {
+            manifest = (&MinecraftInstance::from_reader(BufReader::new(File::open(
+                MINECRAFT_INSTANCE_FILE,
+            )?))?)
+                .into();
+        }else {
+            manifest = self.prompt_for_manifest()?;
+        }
+        manifest.to_writer(BufWriter::new(File::create(MANIFEST_FILE)?))?;
         Ok(())
     }
+}
+
+fn prompt_for_string(prompt: &str) -> Result<String> {
+    let mut s = String::new();
+    write!(stdout(), "{}: ", prompt)?;
+    stdout().flush()?;
+    let _ = stdin().read_line(&mut s)?;
+    if let Some('\n')=s.chars().next_back() {
+        let _ = s.pop();
+    }
+    if let Some('\r')=s.chars().next_back() {
+        let _ = s.pop();
+    }
+    Ok(s)
 }

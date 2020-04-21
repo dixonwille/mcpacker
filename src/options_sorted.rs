@@ -67,7 +67,8 @@ impl<I: Ord, T: Sort<I> + Default> OptionSort<I, T> for Option<T> {
             Some(elements) => elements.add(element),
             None => {
                 let mut elements: T = Default::default();
-                elements.add(element)
+                elements.add(element);
+                *self = Some(elements);
             }
         }
     }
@@ -76,7 +77,8 @@ impl<I: Ord, T: Sort<I> + Default> OptionSort<I, T> for Option<T> {
             Some(my_elements) => my_elements.add_multiple(elements),
             None => {
                 let mut my_elements: T = Default::default();
-                my_elements.add_multiple(elements)
+                my_elements.add_multiple(elements);
+                *self = Some(my_elements);
             }
         }
     }

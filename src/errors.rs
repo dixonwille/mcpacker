@@ -24,3 +24,9 @@ impl From<serde_yaml::Error> for Error {
         Error{err: Box::new(e)}
     }
 }
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self{
+        Error{err: Box::new(e)}
+    }
+}

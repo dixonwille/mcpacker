@@ -11,6 +11,17 @@ use sync::*;
 use crate::errors::Result;
 use structopt::StructOpt;
 
+const MINECRAFT_INSTANCE_FILE: &str = "minecraftinstance.json";
+const MANIFEST_FILE: &str = ".manifest.yaml";
+
+fn minecraft_instance_exists() -> bool {
+    std::path::Path::new(MINECRAFT_INSTANCE_FILE).exists()
+}
+
+fn manifest_exists() -> bool {
+    std::path::Path::new(MANIFEST_FILE).exists()
+}
+
 pub trait Run {
     fn run(&self) -> crate::errors::Result<()>;
 }

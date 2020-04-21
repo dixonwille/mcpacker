@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::io::{Read, Write};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct Manifest {
     pub name: String,
     pub version: String,
@@ -14,30 +15,10 @@ pub struct Manifest {
     pub mod_loader: String,
     pub mod_loader_version: String,
     includes: Option<Vec<String>>, // Can include a jar file not in mod list
-    pub mods: Option<Vec<Mod>>,
+    mods: Option<Vec<Mod>>,
 }
 
 impl Manifest {
-    pub fn new(
-        name: String,
-        version: String,
-        author: String,
-        minecraft_version: String,
-        loader: String,
-        loader_version: String,
-    ) -> Self {
-        Manifest {
-            name,
-            version,
-            author,
-            minecraft_version,
-            mod_loader: loader,
-            mod_loader_version: loader_version,
-            includes: None,
-            mods: None,
-        }
-    }
-
     pub fn from_reader<R: Read>(reader: R) -> Result<Self> {
         let s = serde_yaml::from_reader(reader)?;
         Ok(s)
@@ -82,13 +63,25 @@ impl Manifest {
 
 impl From<&ManifestJson> for Manifest {
     fn from(mj: &ManifestJson) -> Self {
+        let mod_loader_version: String;
+        let mod_loader: String;
+        match mj.minecraft.get_mod_loader() {
+            Some((loader, version)) => {
+                mod_loader= loader;
+                mod_loader_version = version;
+            },
+            None => {
+                mod_loader= String::new();
+                mod_loader_version = String::new();
+            }
+        };
         let mut m= Manifest{
             name: mj.name.clone(),
             version: mj.version.clone(),
             author: mj.author.clone(),
             minecraft_version: mj.minecraft.version.clone(),
-            mod_loader_version: String::new(),
-            mod_loader: String::new(),
+            mod_loader_version,
+            mod_loader,
             includes: None,
             mods: None,
         };
@@ -97,7 +90,8 @@ impl From<&ManifestJson> for Manifest {
             for file in files{
                 modules.push(file.into());
             }
-            m.mods.add_multiple(&mut modules)
+            m.mods.add_multiple(&mut modules);
+            dbg!(&m.mods);
         }
         m
     }
@@ -110,8 +104,11 @@ impl From<&MinecraftInstance> for Manifest{
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct Mod {
+    #[serde(rename = "projectID")]
     pub project_id: u32,
+    #[serde(rename = "fileID")]
     pub file_id: u32,
     // Used for verifying the file downloaded
     file_name: String,

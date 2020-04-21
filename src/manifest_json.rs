@@ -69,18 +69,16 @@ impl From<&Manifest> for ManifestJson {
             author: m.author.clone(),
             minecraft: MinecraftJson{
                 version: m.minecraft_version.clone(),
-                mod_loaders: vec![ModLoaderJson{
-                    id: format!("{}-{}", m.mod_loader, m.mod_loader_version),
-                    primary: true,
-                }]
+                mod_loaders: Vec::new(),
             }
         };
+        mj.minecraft.set_mod_loader(m.mod_loader.clone(), m.mod_loader_version.clone());
         if let Some(mods) = m.get_mods(){
             let mut files: Vec<FileJson> = Vec::with_capacity(mods.len());
             for module in mods{
                 files.push(module.into());
             }
-            mj.files.add_multiple(&mut files)
+            mj.files.add_multiple(&mut files);
         }
         mj
     }
@@ -93,6 +91,29 @@ pub struct MinecraftJson {
     mod_loaders: Vec<ModLoaderJson>,
 }
 
+impl MinecraftJson {
+    pub fn set_mod_loader(&mut self, name: String, version: String) {
+        self.mod_loaders = vec![ModLoaderJson{
+            id: format!("{}-{}", name, version),
+            primary: true
+        }]
+    }
+    pub fn get_mod_loader(&self) -> Option<(String, String)>{
+        if self.mod_loaders.len() == 0 {
+            return None
+        }
+        let loader: &ModLoaderJson = &self.mod_loaders[0];
+        match loader.id.rfind('-'){
+            None => None,
+            Some(idx) => {
+                let (loader, version) = loader.id.split_at(idx);
+                let version = version.trim_start_matches('-');
+                Some((loader.to_string(), version.to_string()))
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ModLoaderJson {
@@ -103,7 +124,9 @@ struct ModLoaderJson {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct FileJson {
+    #[serde(rename = "projectID")]
     pub project_id: u32,
+    #[serde(rename = "fileID")]
     pub file_id: u32,
     required: bool,
 }
