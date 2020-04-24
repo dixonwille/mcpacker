@@ -13,7 +13,7 @@ pub enum Include {
     /// Add an include to the manifest.
     Add(Add),
     /// Remove an existing include from the manifest.
-    #[structopt(name = "rm")]
+    #[structopt(alias = "rm")]
     Remove(Remove),
 }
 

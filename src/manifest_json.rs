@@ -17,8 +17,7 @@ pub struct MinecraftInstance {
 
 impl MinecraftInstance {
     pub fn from_reader<R: Read>(reader: R) -> Result<Self> {
-        let s = serde_json::from_reader(reader)?;
-        Ok(s)
+        serde_json::from_reader(reader).map_err(|e| {e.into()})
     }
 }
 
@@ -45,8 +44,7 @@ pub struct ManifestJson {
 
 impl ManifestJson {
     pub fn to_writer<W: Write>(&self, writer: W) -> Result<()> {
-        serde_json::to_writer(writer, &self)?;
-        Ok(())
+        serde_json::to_writer(writer, &self).map_err(|e| {e.into()})
     }
 
     pub fn get_files(&self) -> Option<&Vec<FileJson>> {

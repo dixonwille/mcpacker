@@ -1,9 +1,7 @@
 use crate::app::*;
 use crate::errors::Result;
 use crate::manifest::*;
-use crate::manifest_json::*;
-use std::fs::File;
-use std::io::{BufReader, BufWriter, Error, ErrorKind, stdin, stdout, Write};
+use std::io::{Error, ErrorKind, stdin, stdout, Write};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -59,18 +57,17 @@ impl InitParams {
 impl Run for InitParams {
     fn run(&self) -> Result<()> {
         if manifest_exists() {
+            // TODO Create my own error
             return Err(Error::new(ErrorKind::AlreadyExists, format!("{} already exists", MANIFEST_FILE)).into())
         }
         let manifest: Manifest;
         if minecraft_instance_exists() {
-            manifest = (&MinecraftInstance::from_reader(BufReader::new(File::open(
-                MINECRAFT_INSTANCE_FILE,
-            )?))?)
-                .into();
+            manifest = (&get_minecraft_instance()?).into();
         }else {
             manifest = self.prompt_for_manifest()?;
         }
-        manifest.to_writer(BufWriter::new(File::create(MANIFEST_FILE)?))?;
+        // TODO Validate and clean the manifest file (Make API calls to twitch app api to add more infor to the mods)
+        manifest.to_writer(create_manifest_file()?)?;
         Ok(())
     }
 }

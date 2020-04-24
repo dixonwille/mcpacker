@@ -20,13 +20,11 @@ pub struct Manifest {
 
 impl Manifest {
     pub fn from_reader<R: Read>(reader: R) -> Result<Self> {
-        let s = serde_yaml::from_reader(reader)?;
-        Ok(s)
+        serde_yaml::from_reader(reader).map_err(|e| {e.into()})
     }
 
     pub fn to_writer<W: Write>(&self, writer: W) -> Result<()> {
-        serde_yaml::to_writer(writer, &self)?;
-        Ok(())
+        serde_yaml::to_writer(writer, &self).map_err(|e| {e.into()})
     }
 
     pub fn get_mods(&self) -> Option<&Vec<Mod>> {
@@ -91,7 +89,6 @@ impl From<&ManifestJson> for Manifest {
                 modules.push(file.into());
             }
             m.mods.add_multiple(&mut modules);
-            dbg!(&m.mods);
         }
         m
     }

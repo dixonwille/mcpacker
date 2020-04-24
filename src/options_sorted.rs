@@ -84,7 +84,18 @@ impl<I: Ord, T: Sort<I> + Default> OptionSort<I, T> for Option<T> {
     }
     fn remove_element(&mut self, element: I) -> Option<I> {
         match self {
-            Some(elements) => elements.remove_element(element),
+            Some(elements) => {
+                match elements.remove_element(element) {
+                    Some(ele) => {
+                        if elements.len() == 0 {
+                            *self = None;
+                        }
+                        Some(ele)
+                    },
+                    None => None
+                }
+
+            },
             None => None,
         }
     }
