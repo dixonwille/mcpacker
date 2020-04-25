@@ -1,9 +1,10 @@
-use crate::options_sorted::*;
 use crate::errors::*;
 use crate::manifest_json::*;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::BTreeSet;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -14,48 +15,78 @@ pub struct Manifest {
     pub minecraft_version: String,
     pub mod_loader: String,
     pub mod_loader_version: String,
-    includes: Option<Vec<String>>, // Can include a jar file not in mod list
-    mods: Option<Vec<Mod>>,
+    includes: Option<BTreeSet<PathBuf>>, // Can include a jar file not in mod list
+    mods: Option<BTreeSet<Mod>>,
 }
 
 impl Manifest {
     pub fn from_reader<R: Read>(reader: R) -> Result<Self> {
-        serde_yaml::from_reader(reader).map_err(|e| {e.into()})
+        serde_yaml::from_reader(reader).map_err(|e| e.into())
     }
 
     pub fn to_writer<W: Write>(&self, writer: W) -> Result<()> {
-        serde_yaml::to_writer(writer, &self).map_err(|e| {e.into()})
+        serde_yaml::to_writer(writer, &self).map_err(|e| e.into())
     }
 
-    pub fn get_mods(&self) -> Option<&Vec<Mod>> {
-        match &self.mods {
+    pub fn get_mods(&self) -> Option<&BTreeSet<Mod>> {
+        match self.mods.as_ref() {
             None => None,
             Some(ref mods) => Some(mods),
         }
     }
 
-    pub fn add_mod(&mut self, m: Mod) {
-        self.mods.add(m)
+    pub fn add_mod(&mut self, module: Mod) -> bool {
+        match &mut self.mods {
+            Some(i) => i.insert(module),
+            None => {
+                let mut modules: BTreeSet<Mod> = BTreeSet::new();
+                let _ = modules.insert(module);
+                self.mods = Some(modules);
+                true
+            }
+        }
     }
 
-    pub fn add_mods(&mut self, mods: &mut Vec<Mod>) {
-        self.mods.add_multiple(mods)
+    pub fn get_includes(&self) -> Option<&BTreeSet<PathBuf>> {
+        match self.includes.as_ref() {
+            None => None,
+            Some(ref includes) => Some(includes),
+        }
     }
 
-    pub fn remove_mod(&mut self, m: Mod) -> Option<Mod> {
-        self.mods.remove_element(m)
+    pub fn add_include(&mut self, include: PathBuf) -> bool {
+        match &mut self.includes {
+            Some(i) => i.insert(include),
+            None => {
+                let mut includes: BTreeSet<PathBuf> = BTreeSet::new();
+                let _ = includes.insert(include);
+                self.includes = Some(includes);
+                true
+            }
+        }
     }
 
-    pub fn add_include(&mut self, include: String) {
-        self.includes.add(include)
+    pub fn include_exists(&self, include: PathBuf) -> bool {
+        match self.includes.as_ref() {
+            None => false,
+            Some(i) => i.contains(&include),
+        }
     }
 
-    pub fn add_includes(&mut self, includes: &mut Vec<String>) {
-        self.includes.add_multiple(includes)
-    }
-
-    pub fn remove_include(&mut self, i: String) -> Option<String> {
-        self.includes.remove_element(i)
+    pub fn remove_include(&mut self, include: &PathBuf) -> bool {
+        match &mut self.includes {
+            Some(i) => {
+                if i.remove(include) {
+                    if i.is_empty() {
+                        self.includes = None;
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
+            None => false,
+        }
     }
 }
 
@@ -65,15 +96,15 @@ impl From<&ManifestJson> for Manifest {
         let mod_loader: String;
         match mj.minecraft.get_mod_loader() {
             Some((loader, version)) => {
-                mod_loader= loader;
+                mod_loader = loader;
                 mod_loader_version = version;
-            },
+            }
             None => {
-                mod_loader= String::new();
+                mod_loader = String::new();
                 mod_loader_version = String::new();
             }
         };
-        let mut m= Manifest{
+        let mut m = Manifest {
             name: mj.name.clone(),
             version: mj.version.clone(),
             author: mj.author.clone(),
@@ -83,18 +114,16 @@ impl From<&ManifestJson> for Manifest {
             includes: None,
             mods: None,
         };
-        if let Some(files) = mj.get_files(){
-            let mut modules: Vec<Mod> = Vec::with_capacity(files.len());
-            for file in files{
-                modules.push(file.into());
+        if let Some(files) = mj.get_files() {
+            for file in files {
+                let _ = m.add_mod(file.into());
             }
-            m.mods.add_multiple(&mut modules);
         }
         m
     }
 }
 
-impl From<&MinecraftInstance> for Manifest{
+impl From<&MinecraftInstance> for Manifest {
     fn from(mi: &MinecraftInstance) -> Self {
         (&mi.manifest).into()
     }
@@ -114,8 +143,8 @@ pub struct Mod {
 }
 
 impl From<&FileJson> for Mod {
-    fn from(fj: &FileJson) -> Self{
-        Mod{
+    fn from(fj: &FileJson) -> Self {
+        Mod {
             project_id: fj.project_id,
             file_id: fj.file_id,
             file_name: String::new(),

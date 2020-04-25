@@ -1,7 +1,7 @@
 use crate::app::*;
 use crate::errors::Result;
 use crate::manifest::*;
-use std::io::{Error, ErrorKind, stdin, stdout, Write};
+use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -58,14 +58,17 @@ impl Run for InitParams {
     fn run(&self) -> Result<()> {
         if manifest_exists() {
             // TODO Create my own error
-            return Err(Error::new(ErrorKind::AlreadyExists, format!("{} already exists", MANIFEST_FILE)).into())
+            return Err(Error::new(
+                ErrorKind::AlreadyExists,
+                format!("{} already exists", MANIFEST_FILE),
+            )
+            .into());
         }
-        let manifest: Manifest;
-        if minecraft_instance_exists() {
-            manifest = (&get_minecraft_instance()?).into();
-        }else {
-            manifest = self.prompt_for_manifest()?;
-        }
+        let manifest = if minecraft_instance_exists() {
+            (&get_minecraft_instance()?).into()
+        } else {
+            self.prompt_for_manifest()?
+        };
         // TODO Validate and clean the manifest file (Make API calls to twitch app api to add more infor to the mods)
         manifest.to_writer(create_manifest_file()?)?;
         Ok(())
@@ -77,10 +80,10 @@ fn prompt_for_string(prompt: &str) -> Result<String> {
     write!(stdout(), "{}: ", prompt)?;
     stdout().flush()?;
     let _ = stdin().read_line(&mut s)?;
-    if let Some('\n')=s.chars().next_back() {
+    if let Some('\n') = s.chars().next_back() {
         let _ = s.pop();
     }
-    if let Some('\r')=s.chars().next_back() {
+    if let Some('\r') = s.chars().next_back() {
         let _ = s.pop();
     }
     Ok(s)

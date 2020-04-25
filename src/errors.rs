@@ -36,3 +36,9 @@ impl From<zip::result::ZipError> for Error {
         Error { err: Box::new(e) }
     }
 }
+
+impl From<std::path::StripPrefixError> for Error {
+    fn from(e: std::path::StripPrefixError) -> Self {
+        Error { err: Box::new(e) }
+    }
+}

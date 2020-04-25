@@ -3,17 +3,17 @@ mod init;
 mod pack;
 mod sync;
 
-use includes::*;
-use init::*;
-use pack::*;
-use sync::*;
-
 use crate::errors::Result;
 use crate::manifest::*;
 use crate::manifest_json::*;
+use includes::*;
+use init::*;
+use pack::*;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+use std::path::PathBuf;
 use structopt::StructOpt;
+use sync::*;
 
 const MINECRAFT_INSTANCE_FILE: &str = "minecraftinstance.json";
 const MANIFEST_FILE: &str = ".manifest.yaml";
@@ -39,6 +39,12 @@ fn get_minecraft_instance() -> Result<MinecraftInstance> {
     MinecraftInstance::from_reader(BufReader::new(File::open(MINECRAFT_INSTANCE_FILE)?))
 }
 
+fn clean_path(p: &PathBuf) -> Result<PathBuf> {
+    let cwd = std::env::current_dir()?;
+    let abs = p.canonicalize()?;
+    Ok((abs.strip_prefix(cwd.as_path())?).to_path_buf())
+}
+
 pub trait Run {
     fn run(&self) -> crate::errors::Result<()>;
 }
@@ -59,12 +65,12 @@ impl App {
 #[derive(StructOpt, Debug)]
 enum SubCommand {
     /// Initialize a new mcpacker project.
-    /// 
+    ///
     /// Will use minecraftinstance.json if it exists.
     /// If it doesn't exists, it will prompt for some information to be able to start a new modpack.
     Init(InitParams),
     /// Syncronize the manifest with the minecraftinstance.json.
-    /// 
+    ///
     /// Downloads mods that are missing and adds jars to override if not in project list.
     /// This can be assumed as twitch app will remove jar files if mod is uninstalled.
     Sync(SyncParams),
