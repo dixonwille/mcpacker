@@ -73,6 +73,31 @@ impl Manifest {
         }
     }
 
+    pub fn include_contained(&self, include: &PathBuf) -> Option<PathBuf> {
+        let mut ppath = include.clone();
+        while let Some(p) = ppath.parent() {
+            if self.include_exists(p.to_path_buf()) {
+                return Some(p.to_path_buf());
+            }
+            ppath = p.to_path_buf();
+        };
+        return None;
+    }
+
+    pub fn includes_clean(&mut self) {
+        if let Some(includes) = &self.includes {
+            let mut remove: Vec<PathBuf> = Vec::new();
+            for include in includes {
+                if let Some(_) = self.include_contained(&include) {
+                    remove.push(include.clone());
+                }
+            }
+            for r in remove {
+                let _ = self.remove_include(&r);
+            }
+        }
+    }
+
     pub fn remove_include(&mut self, include: &PathBuf) -> bool {
         match &mut self.includes {
             Some(i) => {

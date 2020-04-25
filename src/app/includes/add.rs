@@ -25,38 +25,17 @@ impl Run for Add {
             }
             let cpath = clean_path(path)?;
             // Validate that the path is not already included by another
-            let mut ppath = cpath.clone();
-            while let Some(p) = ppath.parent() {
-                if manifest.include_exists(p.to_path_buf()) {
-                    println!(
-                        "{} is already included by {}",
-                        cpath.to_string_lossy(),
-                        p.to_string_lossy()
-                    );
-                    return Ok(());
-                }
-                ppath = p.to_path_buf();
+            if let Some(p) = manifest.include_contained(&cpath){
+                println!("{} already included by {}", cpath.to_string_lossy(), p.to_string_lossy());
+                return Ok(());
             }
             // Try and add it
             if !manifest.add_include(cpath) {
                 println!("{} is already in the include list", path.to_string_lossy());
+                return Ok(());
             }
             // Cleanup other paths that may be included with this new path
-            if let Some(includes) = manifest.get_includes() {
-                let mut remove: Vec<PathBuf> = Vec::new();
-                for include in includes {
-                    ppath = include.clone();
-                    while let Some(p) = ppath.parent() {
-                        if manifest.include_exists(p.to_path_buf()) {
-                            remove.push(include.to_path_buf());
-                        }
-                        ppath = p.to_path_buf();
-                    }
-                }
-                for r in remove {
-                    let _ = manifest.remove_include(&r);
-                }
-            }
+            manifest.includes_clean();
         }
         manifest.to_writer(create_manifest_file()?)
     }
