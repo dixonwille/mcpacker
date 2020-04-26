@@ -81,5 +81,5 @@ impl TwitchAPI {
 struct FileInfo {
     file_name: String,
     file_length: u64,
-    package_fingerprint: u64,
+    package_fingerprint: u32,
 }

@@ -15,6 +15,10 @@ impl Run for SyncParams {
         let manifest = get_manifest()?;
         if let Some(modules) = manifest.get_mods() {
             let mut rt = Runtime::new()?;
+            // TODO get difference (minecraft instance vs manifest)
+            // TODO remove untracked mods (check both includes and mods section in manifest)
+            // TODO download any new mods
+            // TODO verify all mods
             rt.block_on(download_mods(modules.clone()))?;
             rt.block_on(verify_mods(modules.clone()))?;
         }
@@ -76,7 +80,7 @@ async fn verify_mod(module: Mod) -> Result<()> {
     }
     let h = Hash32::hash_with_seed(buf, 1);
 
-    if h as u64 != module.fingerprint {
+    if h != module.fingerprint {
         return Err(io::Error::new(io::ErrorKind::Other, format!("{} is not valid, expected {} got {}", module.file_name, module.fingerprint, h)).into())
     }
     Ok(())

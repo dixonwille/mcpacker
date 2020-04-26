@@ -161,7 +161,7 @@ pub struct Mod {
     pub file_id: u32,
     // Used for verifying the file downloaded
     pub file_name: String,
-    pub fingerprint: u64,
+    pub fingerprint: u32,
     pub file_size: u64,
 }
 
