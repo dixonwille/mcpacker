@@ -3,7 +3,8 @@ use crate::errors::*;
 use reqwest::Client;
 use url::Url;
 use std::io::{Error, ErrorKind};
-use tokio::io::{self, AsyncWriteExt};
+use tokio::io;
+use futures::stream::TryStreamExt;
 use serde::Deserialize;
 
 #[derive(Clone)]
@@ -43,7 +44,7 @@ impl TwitchAPI {
         resp.text().await.map_err(|e| e.into())
     }
 
-    pub async fn download<W: AsyncWriteExt+ std::marker::Unpin>(&self, project: u32, file: u32, w: &mut W) -> Result<()> {
+    pub async fn download<W: io::AsyncWriteExt + std::marker::Unpin>(&self, project: u32, file: u32, w: &mut W) -> Result<()> {
         let url = self.download_url(project, file).await?;
         let url = Url::parse(url.as_str())?;
         let resp = self.client.get(url).send().await?;
@@ -51,6 +52,9 @@ impl TwitchAPI {
             return Err(Error::new(ErrorKind::Other, "incorrect status code").into());
         }
         let stream = resp.bytes_stream();
+        let stream = io::stream_reader(stream.map_err(|e| io::Error::new(io::ErrorKind::Other, e)));
+        let mut stream = io::BufReader::new(stream);
+        let _ = io::copy(&mut stream, w).await?;
         Ok(())
     }
 }
