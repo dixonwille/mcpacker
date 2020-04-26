@@ -1,7 +1,6 @@
 use crate::app::*;
 use crate::errors::Result;
 use crate::twitch_api::*;
-use std::collections::BTreeSet;
 use std::path::Path;
 use structopt::StructOpt;
 use tokio::{fs, io, runtime::Runtime, task};
@@ -20,8 +19,8 @@ impl Run for SyncParams {
     }
 }
 
-async fn download_mods(modules: BTreeSet<Mod>) -> Result<()> {
-    let mut tasks = Vec::with_capacity(modules.len());
+async fn download_mods<I: IntoIterator<Item=Mod>>(modules: I) -> Result<()> {
+    let mut tasks = Vec::new();
     for module in modules {
         tasks.push(task::spawn(download_mod(module)));
     }
