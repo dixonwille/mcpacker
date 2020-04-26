@@ -2,10 +2,10 @@ use crate::app::*;
 use crate::errors::Result;
 use crate::manifest::*;
 use crate::twitch_api::*;
+use std::collections::BTreeSet;
 use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use structopt::StructOpt;
 use tokio::runtime::Runtime;
-use std::collections::BTreeSet;
 
 #[derive(StructOpt, Debug)]
 pub struct InitParams {

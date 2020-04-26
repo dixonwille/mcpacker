@@ -29,10 +29,7 @@ impl Manifest {
     }
 
     pub fn get_mods(&self) -> Option<&BTreeSet<Mod>> {
-        match self.mods.as_ref() {
-            None => None,
-            Some(ref mods) => Some(mods),
-        }
+        self.mods.as_ref().map(|mods| mods)
     }
 
     pub fn add_mod(&mut self, module: Mod) -> bool {
@@ -52,10 +49,7 @@ impl Manifest {
     }
 
     pub fn get_includes(&self) -> Option<&BTreeSet<PathBuf>> {
-        match self.includes.as_ref() {
-            None => None,
-            Some(ref includes) => Some(includes),
-        }
+        self.includes.as_ref().map(|includes| includes)
     }
 
     pub fn add_include(&mut self, include: PathBuf) -> bool {
@@ -85,14 +79,14 @@ impl Manifest {
             }
             ppath = p.to_path_buf();
         }
-        return None;
+        None
     }
 
     pub fn includes_clean(&mut self) {
         if let Some(includes) = &self.includes {
             let mut remove: Vec<PathBuf> = Vec::new();
             for include in includes {
-                if let Some(_) = self.include_contained(&include) {
+                if self.include_contained(&include).is_some() {
                     remove.push(include.clone());
                 }
             }
@@ -205,4 +199,3 @@ impl PartialOrd for Mod {
         Some(self.cmp(other))
     }
 }
-

@@ -1,11 +1,11 @@
-use crate::manifest::*;
 use crate::errors::*;
+use crate::manifest::*;
+use futures::stream::TryStreamExt;
 use reqwest::Client;
-use url::Url;
+use serde::Deserialize;
 use std::io::{Error, ErrorKind};
 use tokio::io;
-use futures::stream::TryStreamExt;
-use serde::Deserialize;
+use url::Url;
 
 #[derive(Clone)]
 pub struct TwitchAPI {
@@ -20,13 +20,19 @@ impl TwitchAPI {
     }
 
     pub async fn get_mod(&self, project: u32, file: u32) -> Result<Mod> {
-        let url = Url::parse(format!("https://addons-ecs.forgesvc.net/api/v2/addon/{}/file/{}", project, file).as_str())?;
+        let url = Url::parse(
+            format!(
+                "https://addons-ecs.forgesvc.net/api/v2/addon/{}/file/{}",
+                project, file
+            )
+            .as_str(),
+        )?;
         let resp = self.client.get(url).send().await?;
         if !resp.status().is_success() {
             return Err(Error::new(ErrorKind::Other, "incorrect status code").into());
         }
         let fi = resp.json::<FileInfo>().await?;
-        Ok(Mod{
+        Ok(Mod {
             project_id: project,
             file_id: file,
             file_name: fi.file_name,
@@ -36,7 +42,13 @@ impl TwitchAPI {
     }
 
     async fn download_url(&self, project: u32, file: u32) -> Result<String> {
-        let url = Url::parse(format!("https://addons-ecs.forgesvc.net/api/v2/addon/{}/file/{}/download-url", project, file).as_str())?;
+        let url = Url::parse(
+            format!(
+                "https://addons-ecs.forgesvc.net/api/v2/addon/{}/file/{}/download-url",
+                project, file
+            )
+            .as_str(),
+        )?;
         let resp = self.client.get(url).send().await?;
         if !resp.status().is_success() {
             return Err(Error::new(ErrorKind::Other, "incorrect status code").into());
@@ -44,7 +56,12 @@ impl TwitchAPI {
         resp.text().await.map_err(|e| e.into())
     }
 
-    pub async fn download<W: io::AsyncWriteExt + std::marker::Unpin>(&self, project: u32, file: u32, w: &mut W) -> Result<()> {
+    pub async fn download<W: io::AsyncWriteExt + std::marker::Unpin>(
+        &self,
+        project: u32,
+        file: u32,
+        w: &mut W,
+    ) -> Result<()> {
         let url = self.download_url(project, file).await?;
         let url = Url::parse(url.as_str())?;
         let resp = self.client.get(url).send().await?;
@@ -61,7 +78,7 @@ impl TwitchAPI {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-struct FileInfo{
+struct FileInfo {
     file_name: String,
     file_length: u64,
     package_fingerprint: u64,

@@ -46,10 +46,7 @@ impl ManifestJson {
     }
 
     pub fn get_files(&self) -> Option<&BTreeSet<FileJson>> {
-        match self.files.as_ref() {
-            None => None,
-            Some(ref files) => Some(files),
-        }
+        self.files.as_ref().map(|files| files)
     }
 
     pub fn add_file(&mut self, file: FileJson) -> bool {

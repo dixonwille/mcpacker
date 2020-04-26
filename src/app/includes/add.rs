@@ -25,8 +25,12 @@ impl Run for Add {
             }
             let cpath = clean_path(path)?;
             // Validate that the path is not already included by another
-            if let Some(p) = manifest.include_contained(&cpath){
-                println!("{} already included by {}", cpath.to_string_lossy(), p.to_string_lossy());
+            if let Some(p) = manifest.include_contained(&cpath) {
+                println!(
+                    "{} already included by {}",
+                    cpath.to_string_lossy(),
+                    p.to_string_lossy()
+                );
                 return Ok(());
             }
             // Try and add it

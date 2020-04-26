@@ -56,7 +56,7 @@ impl From<reqwest::Error> for Error {
 }
 
 impl From<tokio::task::JoinError> for Error {
-    fn from(e: tokio::task::JoinError) -> Self{
+    fn from(e: tokio::task::JoinError) -> Self {
         Error { err: Box::new(e) }
     }
 }
