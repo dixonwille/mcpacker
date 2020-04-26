@@ -6,6 +6,7 @@ mod app;
 mod errors;
 mod manifest;
 mod manifest_json;
+mod twitch_api;
 
 use app::App;
 use errors::Result;

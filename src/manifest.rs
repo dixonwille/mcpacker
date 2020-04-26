@@ -37,7 +37,7 @@ impl Manifest {
 
     pub fn add_mod(&mut self, module: Mod) -> bool {
         match &mut self.mods {
-            Some(i) => i.insert(module),
+            Some(m) => m.insert(module),
             None => {
                 let mut modules: BTreeSet<Mod> = BTreeSet::new();
                 let _ = modules.insert(module);
@@ -45,6 +45,10 @@ impl Manifest {
                 true
             }
         }
+    }
+
+    pub fn set_mods(&mut self, modules: BTreeSet<Mod>) {
+        self.mods = Some(modules);
     }
 
     pub fn get_includes(&self) -> Option<&BTreeSet<PathBuf>> {
@@ -80,7 +84,7 @@ impl Manifest {
                 return Some(p.to_path_buf());
             }
             ppath = p.to_path_buf();
-        };
+        }
         return None;
     }
 
@@ -162,9 +166,9 @@ pub struct Mod {
     #[serde(rename = "fileID")]
     pub file_id: u32,
     // Used for verifying the file downloaded
-    file_name: String,
-    fingerprint: u64,
-    file_size: u64,
+    pub file_name: String,
+    pub fingerprint: u64,
+    pub file_size: u64,
 }
 
 impl From<&FileJson> for Mod {
@@ -201,3 +205,4 @@ impl PartialOrd for Mod {
         Some(self.cmp(other))
     }
 }
+

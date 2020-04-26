@@ -2,7 +2,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug)]
 pub struct Error {
-    err: Box<dyn std::error::Error>,
+    err: Box<dyn std::error::Error + std::marker::Send>,
 }
 
 impl std::error::Error for Error {}
@@ -39,6 +39,24 @@ impl From<zip::result::ZipError> for Error {
 
 impl From<std::path::StripPrefixError> for Error {
     fn from(e: std::path::StripPrefixError) -> Self {
+        Error { err: Box::new(e) }
+    }
+}
+
+impl From<url::ParseError> for Error {
+    fn from(e: url::ParseError) -> Self {
+        Error { err: Box::new(e) }
+    }
+}
+
+impl From<reqwest::Error> for Error {
+    fn from(e: reqwest::Error) -> Self {
+        Error { err: Box::new(e) }
+    }
+}
+
+impl From<tokio::task::JoinError> for Error {
+    fn from(e: tokio::task::JoinError) -> Self{
         Error { err: Box::new(e) }
     }
 }
