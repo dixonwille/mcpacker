@@ -12,7 +12,12 @@ pub const MANIFEST_OVERRIDES_FOLDER: &str = "overrides";
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MinecraftInstance {
-    pub manifest: ManifestJson,
+    pub name: String,
+    pub custom_author: String,
+    pub game_version: String,
+    pub base_mod_loader: BaseModLoader,
+    pub manifest: Option<ManifestJson>,
+    pub installed_addons: Option<Vec<InstalledAddon>>,
 }
 
 impl MinecraftInstance {
@@ -21,10 +26,21 @@ impl MinecraftInstance {
     }
 }
 
-impl From<&Manifest> for MinecraftInstance {
-    fn from(m: &Manifest) -> Self {
-        MinecraftInstance { manifest: m.into() }
-    }
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledAddon {
+    #[serde(rename = "addonID")]
+    pub addon_id: u32,
+    pub installed_file: InstalledFile,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledFile {
+    pub id: u32,
+    pub file_name: String,
+    pub file_length: u64,
+    pub package_fingerprint: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -40,13 +56,28 @@ pub struct ManifestJson {
     files: Option<BTreeSet<FileJson>>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct BaseModLoader {
+    pub name: String,
+}
+
+impl BaseModLoader {
+    pub fn get_mod_loader(&self) -> Option<(&str, &str)> {
+        match self.name.rfind('-') {
+            None => None,
+            Some(idx) => {
+                let (loader, version) = self.name.split_at(idx);
+                let version = version.trim_start_matches('-');
+                Some((loader, version))
+            }
+        }
+    }
+}
+
 impl ManifestJson {
     pub fn to_writer<W: Write>(&self, writer: W) -> Result<()> {
         serde_json::to_writer(writer, &self).map_err(|e| e.into())
-    }
-
-    pub fn get_files(&self) -> Option<&BTreeSet<FileJson>> {
-        self.files.as_ref().map(|files| files)
     }
 
     pub fn add_file(&mut self, file: FileJson) -> bool {
@@ -78,7 +109,7 @@ impl From<&Manifest> for ManifestJson {
             },
         };
         mj.minecraft
-            .set_mod_loader(m.mod_loader.clone(), m.mod_loader_version.clone());
+            .set_mod_loader(&m.mod_loader, &m.mod_loader_version);
         if let Some(mods) = m.get_mods() {
             for module in mods {
                 let _ = mj.add_file(module.into());
@@ -96,25 +127,11 @@ pub struct MinecraftJson {
 }
 
 impl MinecraftJson {
-    pub fn set_mod_loader(&mut self, name: String, version: String) {
+    pub fn set_mod_loader(&mut self, name: impl AsRef<str>, version: impl AsRef<str>) {
         self.mod_loaders = vec![ModLoaderJson {
-            id: format!("{}-{}", name, version),
+            id: format!("{}-{}", name.as_ref(), version.as_ref()),
             primary: true,
         }]
-    }
-    pub fn get_mod_loader(&self) -> Option<(String, String)> {
-        if self.mod_loaders.is_empty() {
-            return None;
-        }
-        let loader: &ModLoaderJson = &self.mod_loaders[0];
-        match loader.id.rfind('-') {
-            None => None,
-            Some(idx) => {
-                let (loader, version) = loader.id.split_at(idx);
-                let version = version.trim_start_matches('-');
-                Some((loader.to_string(), version.to_string()))
-            }
-        }
     }
 }
 

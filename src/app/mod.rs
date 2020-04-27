@@ -11,13 +11,14 @@ use init::*;
 use pack::*;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use sync::*;
 
 const MINECRAFT_INSTANCE_FILE: &str = "minecraftinstance.json";
 const MANIFEST_FILE: &str = ".manifest.yaml";
 const MANIFEST_JSON_FILE: &str = "manifest.json";
+const MODS_DIR: &str = "mods";
 
 fn minecraft_instance_exists() -> bool {
     std::path::Path::new(MINECRAFT_INSTANCE_FILE).exists()
@@ -43,6 +44,27 @@ fn clean_path(p: &PathBuf) -> Result<PathBuf> {
     let cwd = std::env::current_dir()?;
     let abs = p.canonicalize()?;
     Ok((abs.strip_prefix(cwd.as_path())?).to_path_buf())
+}
+
+fn jar_name(p: &PathBuf) -> Option<(PathBuf, bool)> {
+    match p.extension() {
+        Some(ext) if ext == "jar" => Some((p.clone(), false)),
+        Some(ext) if ext == "disabled" => {
+            let parent = p.parent();
+            let file_stem = p.file_stem();
+            match (parent, file_stem) {
+                (Some(par), Some(stem)) => {
+                    let new = Path::new(par).join(stem);
+                    match new.extension() {
+                        Some(new_ext) if new_ext == "jar" => Some((new, true)),
+                        _ => None,
+                    }
+                }
+                (_, _) => None,
+            }
+        }
+        _ => None,
+    }
 }
 
 pub trait Run {

@@ -1,11 +1,8 @@
 use crate::app::*;
 use crate::errors::Result;
 use crate::manifest::*;
-use crate::twitch_api::*;
-use std::collections::BTreeSet;
 use std::io::{stdin, stdout, Error, ErrorKind, Write};
 use structopt::StructOpt;
-use tokio::runtime::Runtime;
 
 #[derive(StructOpt, Debug)]
 pub struct InitParams {
@@ -67,16 +64,11 @@ impl Run for InitParams {
             )
             .into());
         }
-        let mut manifest = if minecraft_instance_exists() {
+        let manifest = if minecraft_instance_exists() {
             (&get_minecraft_instance()?).into()
         } else {
             self.prompt_for_manifest()?
         };
-        if let Some(modules) = manifest.get_mods() {
-            let mut rt = Runtime::new()?;
-            let new_modules = rt.block_on(get_twitch_mods(modules.clone()))?;
-            manifest.set_mods(new_modules);
-        }
         manifest.to_writer(create_manifest_file()?)?;
         Ok(())
     }
@@ -94,14 +86,4 @@ fn prompt_for_string(prompt: &str) -> Result<String> {
         let _ = s.pop();
     }
     Ok(s)
-}
-
-async fn get_twitch_mods(modules: BTreeSet<Mod>) -> Result<BTreeSet<Mod>> {
-    let twitch = TwitchAPI::new();
-    let mut mods = BTreeSet::new();
-    for module in modules {
-        let m = twitch.get_mod(module.project_id, module.file_id).await?;
-        let _ = mods.insert(m);
-    }
-    Ok(mods)
 }

@@ -3,6 +3,7 @@
 //! MCPacker helps maintain Minecarft mod packs.
 
 mod app;
+mod compare;
 mod errors;
 mod manifest;
 mod manifest_json;
