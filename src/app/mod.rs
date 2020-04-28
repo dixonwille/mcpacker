@@ -1,3 +1,4 @@
+mod bump;
 mod includes;
 mod init;
 mod pack;
@@ -6,6 +7,7 @@ mod sync;
 use crate::errors::Result;
 use crate::manifest::*;
 use crate::manifest_json::*;
+use bump::*;
 use includes::*;
 use init::*;
 use pack::*;
@@ -67,10 +69,6 @@ fn jar_name(p: &PathBuf) -> Option<(PathBuf, bool)> {
     }
 }
 
-pub trait Run {
-    fn run(&self) -> crate::errors::Result<()>;
-}
-
 #[derive(StructOpt, Debug)]
 pub struct App {
     #[structopt(subcommand)]
@@ -100,15 +98,18 @@ enum SubCommand {
     Pack(PackParams),
     /// Modify the includes section of the manifest.
     Include(Include),
+    /// Bump the version of the mod pack.
+    Bump(BumpParams),
 }
 
-impl Run for SubCommand {
+impl SubCommand {
     fn run(&self) -> Result<()> {
         match &self {
             SubCommand::Init(p) => p.run(),
             SubCommand::Sync(p) => p.run(),
             SubCommand::Pack(p) => p.run(),
             SubCommand::Include(p) => p.run(),
+            SubCommand::Bump(p) => p.run(),
         }
     }
 }

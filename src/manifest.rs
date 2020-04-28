@@ -1,21 +1,22 @@
 use crate::compare::*;
 use crate::errors::*;
 use crate::manifest_json::*;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
     pub name: String,
-    pub version: String,
+    pub version: Version,
     pub author: String,
-    pub minecraft_version: String,
+    pub minecraft_version: Version,
     pub mod_loader: String,
-    pub mod_loader_version: String,
+    pub mod_loader_version: Version,
     includes: Option<BTreeSet<PathBuf>>, // Can include a jar file not in mod list
     mods: Option<BTreeSet<Mod>>,
 }
@@ -198,9 +199,9 @@ impl From<&MinecraftInstance> for Manifest {
         };
         let m = mi.base_mod_loader.get_mod_loader();
         let (mod_loader, mod_loader_version) = if let Some(loader) = m {
-            (loader.0.to_string(), loader.1.to_string())
+            (loader.0.to_string(), loader.1)
         } else {
-            (String::new(), String::new())
+            (String::new(), Version::new(0, 0, 0))
         };
         let mut m = Manifest {
             name: mi.name.clone(),
@@ -218,6 +219,21 @@ impl From<&MinecraftInstance> for Manifest {
             }
         }
         m
+    }
+}
+
+impl Default for Manifest {
+    fn default() -> Self {
+        Manifest {
+            name: String::new(),
+            version: Version::new(0, 0, 0),
+            author: String::new(),
+            minecraft_version: Version::new(0, 0, 0),
+            mod_loader: String::new(),
+            mod_loader_version: Version::new(0, 0, 0),
+            includes: None,
+            mods: None,
+        }
     }
 }
 

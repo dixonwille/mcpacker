@@ -9,14 +9,10 @@ use structopt::StructOpt;
 use zip::{write::FileOptions, ZipWriter};
 
 #[derive(StructOpt, Debug)]
-pub struct PackParams {
-    /// Modify the version before packing.
-    #[structopt(short = "v")]
-    version: Option<String>,
-}
+pub struct PackParams {}
 
-impl Run for PackParams {
-    fn run(&self) -> Result<()> {
+impl PackParams {
+    pub fn run(&self) -> Result<()> {
         let manifest = get_manifest()?;
         let manifest_json: ManifestJson = (&manifest).into();
         let mut zip_file = ZipWriter::new(BufWriter::new(File::create(

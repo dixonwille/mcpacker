@@ -1,7 +1,8 @@
 use crate::app::*;
 use crate::errors::Result;
 use crate::manifest::*;
-use std::io::{stdin, stdout, Error, ErrorKind, Write};
+use semver::Version;
+use std::io::{self, stdin, stdout, ErrorKind, Write};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -14,16 +15,16 @@ pub struct InitParams {
     author: Option<String>,
     /// Initial version to use for the mod pack.
     #[structopt(short = "v")]
-    version: Option<String>,
+    version: Option<Version>,
     /// Minecraft version to use for the mod pack.
     #[structopt(short = "m", long = "mc_version")]
-    mc_verison: Option<String>,
+    mc_verison: Option<Version>,
     /// Which mod loader to use.
     #[structopt(short = "l", long = "loader", default_value = "forge")]
     loader: String,
-    /// Which version of the mod loader to use [default: latest one found].
+    /// Which version of the mod loader to use.
     #[structopt(long = "loader_version")]
-    loader_version: Option<String>,
+    loader_version: Option<Version>,
 }
 
 impl InitParams {
@@ -40,25 +41,25 @@ impl InitParams {
         };
         match &self.version {
             Some(s) => man.version = s.clone(),
-            None => man.version = prompt_for_string("Pack Version")?,
+            None => man.version = prompt_for_version("Pack Version", 3)?,
         };
         match &self.mc_verison {
             Some(s) => man.minecraft_version = s.clone(),
-            None => man.minecraft_version = prompt_for_string("Minecraft Version")?,
+            None => man.minecraft_version = prompt_for_version("Minecraft Version", 3)?,
         };
         match &self.loader_version {
             Some(s) => man.mod_loader_version = s.clone(),
-            None => man.mod_loader_version = prompt_for_string("Mod Loader Version")?,
+            None => man.mod_loader_version = prompt_for_version("Mod Loader Version", 3)?,
         };
         Ok(man)
     }
 }
 
-impl Run for InitParams {
-    fn run(&self) -> Result<()> {
+impl InitParams {
+    pub fn run(&self) -> Result<()> {
         if manifest_exists() {
             // TODO Create my own error
-            return Err(Error::new(
+            return Err(io::Error::new(
                 ErrorKind::AlreadyExists,
                 format!("{} already exists", MANIFEST_FILE),
             )
@@ -86,4 +87,35 @@ fn prompt_for_string(prompt: &str) -> Result<String> {
         let _ = s.pop();
     }
     Ok(s)
+}
+
+fn prompt_for_version(prompt: &str, retries: u8) -> Result<Version> {
+    let mut cur: u8 = 0;
+    let mut last_err = None;
+    while cur < retries {
+        if cur != 0 {
+            eprintln!(" please retry");
+        }
+        match prompt_for_string(prompt) {
+            Ok(resp) => match Version::parse(&resp) {
+                Ok(ver) => return Ok(ver),
+                Err(e) => {
+                    eprint!("not a valid version");
+                    last_err = Some(e.into());
+                }
+            },
+            Err(e) => {
+                eprint!("unable to read line");
+                last_err = Some(e);
+            }
+        }
+        cur = cur + 1;
+    }
+    match last_err {
+        Some(e) => {
+            eprintln!(" too many attempts");
+            Err(e)
+        }
+        None => Ok(Version::new(0, 0, 0)),
+    }
 }

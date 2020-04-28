@@ -10,8 +10,8 @@ pub struct Remove {
     paths: Vec<PathBuf>,
 }
 
-impl Run for Remove {
-    fn run(&self) -> Result<()> {
+impl Remove {
+    pub fn run(&self) -> Result<()> {
         let mut manifest = get_manifest()?;
         for path in self.paths.iter() {
             if !manifest.remove_include(&clean_path(path)?) {

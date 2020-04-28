@@ -1,5 +1,6 @@
 use crate::errors::*;
 use crate::manifest::*;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
@@ -14,7 +15,7 @@ pub const MANIFEST_OVERRIDES_FOLDER: &str = "overrides";
 pub struct MinecraftInstance {
     pub name: String,
     pub custom_author: String,
-    pub game_version: String,
+    pub game_version: Version,
     pub base_mod_loader: BaseModLoader,
     pub manifest: Option<ManifestJson>,
     pub installed_addons: Option<Vec<InstalledAddon>>,
@@ -50,7 +51,7 @@ pub struct ManifestJson {
     pub manifest_type: String,
     pub manifest_version: u8,
     pub name: String,
-    pub version: String,
+    pub version: Version,
     pub author: String,
     overrides: String,
     files: Option<BTreeSet<FileJson>>,
@@ -63,13 +64,18 @@ pub struct BaseModLoader {
 }
 
 impl BaseModLoader {
-    pub fn get_mod_loader(&self) -> Option<(&str, &str)> {
+    pub fn get_mod_loader(&self) -> Option<(&str, Version)> {
         match self.name.rfind('-') {
             None => None,
             Some(idx) => {
                 let (loader, version) = self.name.split_at(idx);
                 let version = version.trim_start_matches('-');
-                Some((loader, version))
+                let ver = Version::parse(version);
+                let ver = match ver {
+                    Ok(v) => v,
+                    Err(_) => return None,
+                };
+                Some((loader, ver))
             }
         }
     }
@@ -122,14 +128,14 @@ impl From<&Manifest> for ManifestJson {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct MinecraftJson {
-    pub version: String,
+    pub version: Version,
     mod_loaders: Vec<ModLoaderJson>,
 }
 
 impl MinecraftJson {
-    pub fn set_mod_loader(&mut self, name: impl AsRef<str>, version: impl AsRef<str>) {
+    pub fn set_mod_loader(&mut self, name: impl AsRef<str>, version: &Version) {
         self.mod_loaders = vec![ModLoaderJson {
-            id: format!("{}-{}", name.as_ref(), version.as_ref()),
+            id: format!("{}-{}", name.as_ref(), version),
             primary: true,
         }]
     }

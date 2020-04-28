@@ -11,8 +11,8 @@ pub struct Add {
     paths: Vec<PathBuf>,
 }
 
-impl Run for Add {
-    fn run(&self) -> Result<()> {
+impl Add {
+    pub fn run(&self) -> Result<()> {
         let mut manifest = get_manifest()?;
         for path in self.paths.iter() {
             if !path.exists() {

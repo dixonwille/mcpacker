@@ -60,3 +60,15 @@ impl From<tokio::task::JoinError> for Error {
         Error { err: Box::new(e) }
     }
 }
+
+impl From<semver::SemVerError> for Error {
+    fn from(e: semver::SemVerError) -> Self {
+        Error { err: Box::new(e) }
+    }
+}
+
+impl From<git2::Error> for Error {
+    fn from(e: git2::Error) -> Self {
+        Error { err: Box::new(e) }
+    }
+}

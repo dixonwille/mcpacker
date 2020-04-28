@@ -10,8 +10,8 @@ use tokio::{fs, io, runtime::Runtime, stream::StreamExt, task};
 #[derive(StructOpt, Debug)]
 pub struct SyncParams {}
 
-impl Run for SyncParams {
-    fn run(&self) -> Result<()> {
+impl SyncParams {
+    pub fn run(&self) -> Result<()> {
         let mut rt = Runtime::new()?;
         let mut manifest = get_manifest()?;
         let new_manifest: Manifest = (&get_minecraft_instance()?).into();
@@ -71,7 +71,6 @@ async fn sync_mod_jars(manifest: Manifest) -> Result<()> {
 }
 
 async fn verify_file(orig: PathBuf, module: Mod) -> Result<()> {
-    println!("verifying: {}", &orig.to_string_lossy());
     let f = fs::File::open(&orig).await?;
     let mut r = io::BufReader::new(f);
 
@@ -112,7 +111,6 @@ async fn verify_file(orig: PathBuf, module: Mod) -> Result<()> {
 }
 
 async fn remove_file(orig: PathBuf) -> Result<()> {
-    println!("removing: {}", &orig.to_string_lossy());
     Ok(fs::remove_file(orig).await?)
 }
 
@@ -125,7 +123,6 @@ async fn download_mod(module: Mod) -> Result<()> {
     {
         let f = fs::File::create(&path).await?;
         let mut w = io::BufWriter::new(f);
-        println!("downloading: {}", &path.to_string_lossy());
         twitch
             .download(module.project_id, module.file_id, &mut w)
             .await?;
