@@ -1,3 +1,4 @@
+mod author;
 mod bump;
 mod includes;
 mod init;
@@ -7,6 +8,7 @@ mod sync;
 use crate::errors::Result;
 use crate::manifest::*;
 use crate::manifest_json::*;
+use author::*;
 use bump::*;
 use includes::*;
 use init::*;
@@ -100,6 +102,11 @@ enum SubCommand {
     Include(Include),
     /// Bump the version of the mod pack.
     Bump(BumpParams),
+    /// Set the author of the mod pack.
+    ///
+    /// This only updates the manifest that only takes effect after a pack.
+    /// Will need to import the new pack to see author changes.
+    Author(AuthorParams),
 }
 
 impl SubCommand {
@@ -110,6 +117,7 @@ impl SubCommand {
             SubCommand::Pack(p) => p.run(),
             SubCommand::Include(p) => p.run(),
             SubCommand::Bump(p) => p.run(),
+            SubCommand::Author(p) => p.run(),
         }
     }
 }
