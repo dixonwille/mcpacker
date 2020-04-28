@@ -16,6 +16,9 @@ impl SyncParams {
         let mut manifest = get_manifest()?;
         let new_manifest: Manifest = (&get_minecraft_instance()?).into();
         let _ = manifest.sync_mods(&new_manifest);
+        manifest.mod_loader = new_manifest.mod_loader;
+        manifest.mod_loader_version = new_manifest.mod_loader_version;
+        manifest.name = new_manifest.name;
         manifest.to_writer(create_manifest_file()?)?;
         rt.block_on(sync_mod_jars(manifest))?;
         Ok(())
