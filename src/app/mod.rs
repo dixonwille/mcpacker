@@ -44,8 +44,8 @@ fn get_minecraft_instance() -> Result<MinecraftInstance> {
     MinecraftInstance::from_reader(BufReader::new(File::open(MINECRAFT_INSTANCE_FILE)?))
 }
 
-fn clean_path(p: &PathBuf) -> Result<PathBuf> {
-    let cwd = std::env::current_dir()?;
+fn relative_path(p: &PathBuf) -> Result<PathBuf> {
+    let cwd = std::env::current_dir()?.canonicalize()?;
     let abs = p.canonicalize()?;
     Ok((abs.strip_prefix(cwd.as_path())?).to_path_buf())
 }

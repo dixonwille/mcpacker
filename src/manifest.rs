@@ -8,6 +8,14 @@ use std::collections::BTreeSet;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
+
+#[cfg(target_os="windows")]
+fn clean_path(p: impl AsRef<Path>) -> PathBuf {
+    PathBuf::from(p.as_ref().to_string_lossy().replace("\\", "/"))
+}
+
+#[cfg(not(target_os="windows"))]
+fn clean_path(p: impl AsRef<Path>) -> PathBuf {}
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
@@ -88,7 +96,8 @@ impl Manifest {
         self.includes.as_ref().map(|includes| includes)
     }
 
-    pub fn add_include(&mut self, include: PathBuf) -> bool {
+    pub fn add_include(&mut self, mut include: PathBuf) -> bool {
+        include = clean_path(&include);
         match &mut self.includes {
             Some(i) => i.insert(include),
             None => {
@@ -101,19 +110,20 @@ impl Manifest {
     }
 
     pub fn include_exists(&self, include: impl AsRef<Path>) -> bool {
+        let include = clean_path(include);
         match self.includes.as_ref() {
             None => false,
-            Some(i) => i.contains(include.as_ref()),
+            Some(i) => i.contains(&include),
         }
     }
 
     pub fn include_contained(&self, include: impl AsRef<Path>) -> Option<PathBuf> {
-        let mut ppath = include.as_ref();
+        let mut ppath = clean_path(include);
         while let Some(p) = ppath.parent() {
             if self.include_exists(p) {
                 return Some(p.to_path_buf());
             }
-            ppath = p;
+            ppath = p.to_owned();
         }
         None
     }
@@ -133,9 +143,10 @@ impl Manifest {
     }
 
     pub fn remove_include(&mut self, include: impl AsRef<Path>) -> bool {
+        let include = clean_path(include);
         match &mut self.includes {
             Some(i) => {
-                if i.remove(include.as_ref()) {
+                if i.remove(&include) {
                     if i.is_empty() {
                         self.includes = None;
                     }

@@ -23,7 +23,7 @@ impl Add {
                 )
                 .into());
             }
-            let cpath = clean_path(path)?;
+            let cpath = relative_path(path)?;
             // Validate that the path is not already included by another
             if let Some(p) = manifest.include_contained(&cpath) {
                 println!(

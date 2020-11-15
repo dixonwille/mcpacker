@@ -14,7 +14,7 @@ impl Remove {
     pub fn run(&self) -> Result<()> {
         let mut manifest = get_manifest()?;
         for path in self.paths.iter() {
-            if !manifest.remove_include(&clean_path(path)?) {
+            if !manifest.remove_include(&relative_path(path)?) {
                 println!("{} was not in the includes", path.to_string_lossy());
             }
         }
