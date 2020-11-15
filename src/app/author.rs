@@ -1,10 +1,10 @@
-use crate::errors::Result;
 use crate::app::*;
+use crate::errors::Result;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
 pub struct AuthorParams {
-    author: String
+    author: String,
 }
 
 impl AuthorParams {

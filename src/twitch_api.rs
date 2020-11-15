@@ -1,8 +1,10 @@
 use crate::errors::*;
-use futures::stream::TryStreamExt;
 use reqwest::Client;
 use std::io::{Error, ErrorKind};
-use tokio::io;
+use tokio::{
+    io::{self, AsyncWriteExt},
+    stream::StreamExt,
+};
 use url::Url;
 
 #[derive(Clone)]
@@ -32,22 +34,21 @@ impl TwitchAPI {
         resp.text().await.map_err(|e| e.into())
     }
 
-    pub async fn download<W: io::AsyncWriteExt + std::marker::Unpin>(
+    pub async fn download<W: io::AsyncWrite + std::marker::Unpin>(
         &self,
         project: u32,
         file: u32,
         w: &mut W,
     ) -> Result<()> {
-        let url = self.download_url(project, file).await?;
-        let url = Url::parse(url.as_str())?;
+        let url = Url::parse(self.download_url(project, file).await?.as_str())?;
         let resp = self.client.get(url).send().await?;
         if !resp.status().is_success() {
             return Err(Error::new(ErrorKind::Other, "incorrect status code").into());
         }
-        let stream = resp.bytes_stream();
-        let stream = io::stream_reader(stream.map_err(|e| io::Error::new(io::ErrorKind::Other, e)));
-        let mut stream = io::BufReader::new(stream);
-        let _ = io::copy(&mut stream, w).await?;
+        let mut stream = resp.bytes_stream();
+        while let Some(chunk) = stream.next().await {
+            let _ = w.write_all(chunk?.as_ref()).await?;
+        }
         Ok(())
     }
 }

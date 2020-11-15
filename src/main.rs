@@ -7,6 +7,7 @@ mod compare;
 mod errors;
 mod manifest;
 mod manifest_json;
+mod murmur2;
 mod twitch_api;
 
 use app::App;

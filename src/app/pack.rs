@@ -50,7 +50,7 @@ impl ZipInclude {
                 println!("already added {} to archive", over.to_string_lossy());
                 return Ok(());
             }
-            z.add_directory_from_path(over.as_path(), FileOptions::default())?;
+            z.add_directory(over.to_string_lossy(), FileOptions::default())?;
             for entry in read_dir(p)? {
                 let path = entry?.path();
                 self.path_to_zip(z, &path)?;
@@ -61,7 +61,7 @@ impl ZipInclude {
                 println!("already added {} to archive", over.to_string_lossy());
                 return Ok(());
             }
-            z.start_file_from_path(over.as_path(), FileOptions::default())?;
+            z.start_file(over.to_string_lossy(), FileOptions::default())?;
             let _ = copy(&mut BufReader::new(File::open(p)?), z.by_ref())?;
         } else {
             println!("unsure what to do with include {}", p.to_string_lossy())

@@ -24,9 +24,9 @@ default-features = false
 features = ["json", "rustls-tls", "stream", "trust-dns"]
 
 [dependencies.tokio]
-version = "0.2.23"
+version = "0.2"
 default-features = false
-features = ["rt-threaded", "io-util", "stream", "fs"]
+features = ["rt-threaded", "io-util", "stream", "fs", "macros"]
 
 [dependencies.semver]
 version = "0.11"
@@ -42,7 +42,3 @@ default-features = false
 version = "0.5"
 default-features = false
 features = ["deflate", "time"]
-
-[dependencies.futures]
-version = "0.3"
-default-features = false
