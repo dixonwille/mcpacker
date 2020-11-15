@@ -1,11 +1,11 @@
 use crate::app::*;
 use crate::errors::Result;
 use crate::twitch_api::*;
-use fasthash::{murmur2::Hash32, FastHash};
 use std::io::Cursor;
 use std::path::Path;
 use structopt::StructOpt;
 use tokio::{fs, io, runtime::Runtime, stream::StreamExt, task};
+use byteorder::{ByteOrder, LittleEndian};
 
 #[derive(StructOpt, Debug)]
 pub struct SyncParams {}
@@ -77,7 +77,6 @@ async fn verify_file(orig: PathBuf, module: Mod) -> Result<()> {
     let f = fs::File::open(&orig).await?;
     let mut r = io::BufReader::new(f);
 
-    // TODO figure out how to hash Async
     let mut cur = Cursor::new(Vec::new());
     let mut buf = io::BufWriter::new(&mut cur);
     let l = io::copy(&mut r, &mut buf).await?;
@@ -98,7 +97,7 @@ async fn verify_file(orig: PathBuf, module: Mod) -> Result<()> {
             _ => buf.push(b),
         }
     }
-    let h = Hash32::hash_with_seed(buf, 1);
+    let h = murmurhash2(buf.as_ref(), 1);
 
     if h != module.fingerprint {
         return Err(io::Error::new(
@@ -131,4 +130,53 @@ async fn download_mod(module: Mod) -> Result<()> {
             .await?;
     }
     verify_file(path, module).await
+}
+
+// Ported from
+// https://sites.google.com/site/murmurhash/ using MurmurHash2.cpp
+fn murmurhash2(key: &[u8], seed: u32) -> u32 {
+    const M: u32 = 0x5bd1_e995;
+    const R: u32 = 24;
+
+    let mut h = seed ^ (key.len() as u32);
+    let mut chunks = key.chunks_exact(4);
+
+    while let Some(chunk) = chunks.next() {
+        // Make sure we are using LittleEndian
+        let mut k = LittleEndian::read_u32(chunk);
+
+        k = k.wrapping_mul(M);
+        k ^= k >> R;
+        k = k.wrapping_mul(M);
+
+        h = h.wrapping_mul(M);
+        h ^= k;
+    }
+    let remainder = chunks.remainder();
+
+    // Handle the last few bytes of the input array
+    match remainder.len() {
+        3 => {
+            h ^= u32::from(remainder[2]) << 16;
+            h ^= u32::from(remainder[1]) << 8;
+            h ^= u32::from(remainder[0]);
+            h = h.wrapping_mul(M);
+        }
+        2 => {
+            h ^= u32::from(remainder[1]) << 8;
+            h ^= u32::from(remainder[0]);
+            h = h.wrapping_mul(M);
+        }
+        1 => {
+            h ^= u32::from(remainder[0]);
+            h = h.wrapping_mul(M);
+        }
+        _ => {}
+    }
+
+    // Do a few final mixes of the hash to ensure the last few
+	// bytes are well-incorporated.
+    h ^= h >> 13;
+    h = h.wrapping_mul(M);
+    h ^ (h >> 15)
 }
