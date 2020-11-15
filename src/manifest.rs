@@ -8,14 +8,14 @@ use std::collections::BTreeSet;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 
-
-#[cfg(target_os="windows")]
+#[cfg(target_os = "windows")]
 fn clean_path(p: impl AsRef<Path>) -> PathBuf {
     PathBuf::from(p.as_ref().to_string_lossy().replace("\\", "/"))
 }
 
-#[cfg(not(target_os="windows"))]
+#[cfg(not(target_os = "windows"))]
 fn clean_path(p: impl AsRef<Path>) -> PathBuf {}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Manifest {
