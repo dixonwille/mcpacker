@@ -1,6 +1,6 @@
-use crate::compare::*;
+use crate::utils::compare::*;
 use crate::errors::*;
-use crate::manifest_json::*;
+use crate::files::minecraft_instance::*;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;

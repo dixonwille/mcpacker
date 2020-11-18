@@ -1,6 +1,6 @@
-use crate::app::*;
+use crate::*;
 use crate::errors::Result;
-use crate::manifest_json::*;
+use crate::files::manifest_json::*;
 use std::collections::HashSet;
 use std::fs::{read_dir, File};
 use std::io::{copy, BufReader, BufWriter, Seek, Write};

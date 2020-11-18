@@ -1,4 +1,4 @@
-use crate::app::*;
+use crate::{get_manifest, create_manifest_file};
 use crate::errors::Result;
 use structopt::StructOpt;
 

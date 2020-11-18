@@ -1,7 +1,7 @@
-use crate::app::*;
+use crate::*;
 use crate::errors::Result;
-use crate::murmur2::murmurhash2_32;
-use crate::twitch_api::*;
+use crate::utils::murmur2::murmurhash2_32;
+use crate::utils::twitch_api::*;
 use std::path::Path;
 use std::sync::Arc;
 use structopt::StructOpt;

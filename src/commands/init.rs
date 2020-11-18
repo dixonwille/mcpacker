@@ -1,6 +1,6 @@
-use crate::app::*;
+use crate::*;
 use crate::errors::Result;
-use crate::manifest::*;
+use crate::files::manifest::*;
 use semver::Version;
 use std::io::{self, stdin, stdout, ErrorKind, Write};
 use structopt::StructOpt;

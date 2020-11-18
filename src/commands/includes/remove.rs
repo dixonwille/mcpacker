@@ -1,4 +1,4 @@
-use crate::app::*;
+use crate::*;
 use crate::errors::Result;
 use std::path::PathBuf;
 use structopt::StructOpt;

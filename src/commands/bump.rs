@@ -1,4 +1,4 @@
-use crate::app::*;
+use crate::*;
 use crate::errors::Result;
 use git2::{ObjectType, Repository, RepositoryState};
 use semver::{Identifier, Version};
