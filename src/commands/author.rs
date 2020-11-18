@@ -1,5 +1,5 @@
-use crate::{get_manifest, create_manifest_file};
-use crate::errors::Result;
+use crate::files::manifest::{create_manifest_file, get_manifest};
+use anyhow::Result;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]

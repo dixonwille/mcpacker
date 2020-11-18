@@ -1,10 +1,14 @@
-use crate::*;
-use crate::errors::Result;
-use crate::files::manifest_json::*;
-use std::collections::HashSet;
-use std::fs::{read_dir, File};
-use std::io::{copy, BufReader, BufWriter, Seek, Write};
-use std::path::Path;
+use crate::files::{
+    manifest::get_manifest,
+    manifest_json::{ManifestJson, MANIFEST_JSON_FILE, MANIFEST_OVERRIDES_FOLDER},
+};
+use anyhow::Result;
+use std::{
+    collections::HashSet,
+    fs::{read_dir, File},
+    io::{copy, BufReader, BufWriter, Seek, Write},
+    path::{Path, PathBuf},
+};
 use structopt::StructOpt;
 use zip::{write::FileOptions, ZipWriter};
 
@@ -19,7 +23,7 @@ impl PackParams {
             manifest.name.clone() + ".zip",
         )?));
         zip_file.set_comment("Minecraft ModPack made by MCPacker");
-        zip_file.start_file(MANIFEST_JSON_FILE, FileOptions::default())?;
+        zip_file.start_file(MANIFEST_JSON_FILE.to_string_lossy(), FileOptions::default())?;
         manifest_json.to_writer(BufWriter::new(zip_file.by_ref()))?;
         if let Some(includes) = manifest.get_includes() {
             let mut zi = ZipInclude::new();

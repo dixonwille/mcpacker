@@ -1,9 +1,17 @@
-use crate::*;
-use crate::errors::Result;
-use crate::utils::murmur2::murmurhash2_32;
-use crate::utils::twitch_api::*;
-use std::path::Path;
-use std::sync::Arc;
+use crate::{
+    files::{
+        manifest::{create_manifest_file, get_manifest, Manifest, Mod},
+        minecraft_instance::get_minecraft_instance,
+        MODS_DIR,
+    },
+    utils::{murmur2::murmurhash2_32, twitch_api::TwitchAPI},
+};
+use anyhow::Result;
+use once_cell::sync::Lazy;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use structopt::StructOpt;
 use tokio::{
     fs,
@@ -32,9 +40,8 @@ impl SyncParams {
 #[tokio::main]
 async fn sync_mod_jars(manifest: Manifest) -> Result<()> {
     let mut tasks = Vec::new();
-    let dir = Path::new(MODS_DIR);
-    if dir.is_dir() {
-        let mut file_stream = fs::read_dir(dir).await?;
+    if MODS_DIR.is_dir() {
+        let mut file_stream = fs::read_dir(Lazy::force(&MODS_DIR)).await?;
         while let Some(file) = file_stream.next().await {
             let file = file?;
             let file_path = file.path();
@@ -63,13 +70,13 @@ async fn sync_mod_jars(manifest: Manifest) -> Result<()> {
     if let Some(modules) = manifest.get_mods() {
         let twitch = Arc::new(TwitchAPI::new());
         for module in modules {
-            let path = Path::new(MODS_DIR).join(Path::new(&module.file_name));
+            let path = MODS_DIR.join(Path::new(&module.file_name));
             if path.exists() {
                 continue;
             }
             let mut disabled_path = module.file_name.clone();
             disabled_path.push_str(".disabled");
-            let disabled_path = Path::new(MODS_DIR).join(Path::new(&disabled_path));
+            let disabled_path = MODS_DIR.join(Path::new(&disabled_path));
             if disabled_path.exists() {
                 continue;
             }
@@ -142,9 +149,8 @@ async fn remove_file(orig: PathBuf) -> Result<()> {
 }
 
 async fn download_mod(twitch: Arc<TwitchAPI>, module: Mod) -> Result<()> {
-    let folder = Path::new(MODS_DIR);
-    fs::create_dir_all(folder).await?;
-    let path = folder.join(Path::new(&module.file_name));
+    fs::create_dir_all(Lazy::force(&MODS_DIR)).await?;
+    let path = MODS_DIR.join(Path::new(&module.file_name));
     // Want to make sure the file handle is closed before verifying the file
     let f = fs::OpenOptions::new()
         .truncate(true)
@@ -161,4 +167,25 @@ async fn download_mod(twitch: Arc<TwitchAPI>, module: Mod) -> Result<()> {
     let mut f = w.into_inner();
     let _ = f.seek(io::SeekFrom::Start(0)).await?; // Need to make sure we start at the beginning of the file
     verify_file(f, module).await
+}
+
+fn jar_name(p: &PathBuf) -> Option<(PathBuf, bool)> {
+    match p.extension() {
+        Some(ext) if ext == "jar" => Some((p.clone(), false)),
+        Some(ext) if ext == "disabled" => {
+            let parent = p.parent();
+            let file_stem = p.file_stem();
+            match (parent, file_stem) {
+                (Some(par), Some(stem)) => {
+                    let new = Path::new(par).join(stem);
+                    match new.extension() {
+                        Some(new_ext) if new_ext == "jar" => Some((new, true)),
+                        _ => None,
+                    }
+                }
+                (_, _) => None,
+            }
+        }
+        _ => None,
+    }
 }

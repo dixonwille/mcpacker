@@ -1,10 +1,11 @@
-use crate::errors::*;
-use crate::files::manifest::*;
+use crate::files::manifest::{Manifest, Mod};
+use anyhow::Result;
+use once_cell::sync::Lazy;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::BTreeSet;
-use std::io::Write;
+use std::{cmp::Ordering, collections::BTreeSet, io::Write, path::PathBuf};
+
+pub static MANIFEST_JSON_FILE: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("manifest.json"));
 
 const MANIFEST_VERSION: u8 = 1;
 const MANIFEST_TYPE: &str = "minecraftModpack";

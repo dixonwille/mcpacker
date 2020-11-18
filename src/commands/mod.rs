@@ -1,6 +1,6 @@
-pub(crate) mod sync;
-pub(crate) mod pack;
-pub(crate) mod init;
-pub(crate) mod bump;
-pub(crate) mod author;
-pub(crate) mod includes;
+pub mod author;
+pub mod bump;
+pub mod includes;
+pub mod init;
+pub mod pack;
+pub mod sync;

@@ -1,4 +1,4 @@
-use crate::errors::*;
+use anyhow::{anyhow, Context, Result};
 use reqwest::Client;
 use std::io::{Error, ErrorKind};
 use tokio::{
@@ -26,12 +26,15 @@ impl TwitchAPI {
                 project, file
             )
             .as_str(),
-        )?;
+        )
+        .expect("could not create get download url");
         let resp = self.client.get(url).send().await?;
         if !resp.status().is_success() {
-            return Err(Error::new(ErrorKind::Other, "incorrect status code").into());
+            return Err(anyhow!("could not get download url"));
         }
-        resp.text().await.map_err(|e| e.into())
+        resp.text()
+            .await
+            .with_context(|| "could not get body of get download request as text")
     }
 
     pub async fn download<W: io::AsyncWrite + std::marker::Unpin>(

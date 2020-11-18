@@ -1,5 +1,5 @@
-use crate::*;
-use crate::errors::Result;
+use crate::files::manifest::{create_manifest_file, get_manifest, Manifest, MANIFEST_FILE};
+use anyhow::Result;
 use git2::{ObjectType, Repository, RepositoryState};
 use semver::{Identifier, Version};
 use std::{env, io};
@@ -104,8 +104,7 @@ impl BumpParams {
             }
             // Stage the manifest file on top of any currently staged objects.
             let mut idx = repo.index()?;
-            let manifest_path = Path::new(MANIFEST_FILE);
-            idx.add_path(manifest_path)?;
+            idx.add_path(&MANIFEST_FILE)?;
             let tree = idx.write_tree()?;
             idx.write()?;
             // Commit the staged objects

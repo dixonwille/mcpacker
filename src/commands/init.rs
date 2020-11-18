@@ -1,8 +1,10 @@
-use crate::*;
-use crate::errors::Result;
-use crate::files::manifest::*;
+use crate::files::{
+    manifest::{create_manifest_file, Manifest, MANIFEST_FILE},
+    minecraft_instance::{get_minecraft_instance, MINECRAFT_INSTANCE_FILE},
+};
+use anyhow::{anyhow, Result};
 use semver::Version;
-use std::io::{self, stdin, stdout, ErrorKind, Write};
+use std::io::{stdin, stdout, Write};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -57,15 +59,13 @@ impl InitParams {
 
 impl InitParams {
     pub fn run(&self) -> Result<()> {
-        if manifest_exists() {
-            // TODO Create my own error
-            return Err(io::Error::new(
-                ErrorKind::AlreadyExists,
-                format!("{} already exists", MANIFEST_FILE),
-            )
-            .into());
+        if MANIFEST_FILE.exists() {
+            return Err(anyhow!(
+                "{} already exists",
+                MANIFEST_FILE.to_string_lossy()
+            ));
         }
-        let manifest = if minecraft_instance_exists() {
+        let manifest = if MINECRAFT_INSTANCE_FILE.exists() {
             (&get_minecraft_instance()?).into()
         } else {
             self.prompt_for_manifest()?

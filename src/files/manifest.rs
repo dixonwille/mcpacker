@@ -1,12 +1,20 @@
-use crate::utils::compare::*;
-use crate::errors::*;
-use crate::files::minecraft_instance::*;
+use crate::{
+    files::minecraft_instance::{InstalledAddon, MinecraftInstance},
+    utils::compare::{compare, Side},
+};
+use anyhow::Result;
+use once_cell::sync::Lazy;
 use semver::Version;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::collections::BTreeSet;
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::{
+    cmp::Ordering,
+    collections::BTreeSet,
+    fs::File,
+    io::{BufReader, BufWriter, Read, Write},
+    path::{Path, PathBuf},
+};
+
+pub static MANIFEST_FILE: Lazy<PathBuf> = Lazy::new(|| PathBuf::from(".manifest.yaml"));
 
 #[cfg(target_os = "windows")]
 fn clean_path(p: impl AsRef<Path>) -> PathBuf {
@@ -15,6 +23,14 @@ fn clean_path(p: impl AsRef<Path>) -> PathBuf {
 
 #[cfg(not(target_os = "windows"))]
 fn clean_path(p: impl AsRef<Path>) -> PathBuf {}
+
+pub fn get_manifest() -> Result<Manifest> {
+    Manifest::from_reader(BufReader::new(File::open(Lazy::force(&MANIFEST_FILE))?))
+}
+
+pub fn create_manifest_file() -> Result<BufWriter<File>> {
+    Ok(BufWriter::new(File::create(Lazy::force(&MANIFEST_FILE))?))
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

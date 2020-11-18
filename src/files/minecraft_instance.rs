@@ -1,8 +1,22 @@
-use crate::errors::*;
 use crate::files::manifest_json::ManifestJson;
+use anyhow::Result;
+use once_cell::sync::Lazy;
 use semver::Version;
 use serde::Deserialize;
-use std::io::Read;
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+    path::PathBuf,
+};
+
+pub static MINECRAFT_INSTANCE_FILE: Lazy<PathBuf> =
+    Lazy::new(|| PathBuf::from("minecraftinstance.json"));
+
+pub fn get_minecraft_instance() -> Result<MinecraftInstance> {
+    MinecraftInstance::from_reader(BufReader::new(File::open(Lazy::force(
+        &MINECRAFT_INSTANCE_FILE,
+    ))?))
+}
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]

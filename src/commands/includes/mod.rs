@@ -1,10 +1,11 @@
 mod add;
 mod remove;
 
-use add::*;
-use remove::*;
-
-use crate::errors::Result;
+use crate::files::CWD;
+use add::Add;
+use anyhow::Result;
+use remove::Remove;
+use std::path::PathBuf;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -23,4 +24,9 @@ impl Include {
             Include::Remove(p) => p.run(),
         }
     }
+}
+
+fn relative_path(p: &PathBuf) -> Result<PathBuf> {
+    let abs = p.canonicalize()?;
+    Ok((abs.strip_prefix(CWD.as_path())?).to_path_buf())
 }
