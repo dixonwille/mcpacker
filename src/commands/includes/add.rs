@@ -2,8 +2,7 @@ use crate::{
     commands::includes::relative_path,
     files::manifest::{create_manifest_file, get_manifest},
 };
-use anyhow::Result;
-use std::io::{Error, ErrorKind};
+use anyhow::{anyhow, Result};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -20,11 +19,7 @@ impl Add {
         for path in self.paths.iter() {
             if !path.exists() {
                 // TODO Create my own error
-                return Err(Error::new(
-                    ErrorKind::NotFound,
-                    format!("{} does not exist", path.to_string_lossy()),
-                )
-                .into());
+                return Err(anyhow!(format!("{} does not exit", path.to_string_lossy())));
             }
             let cpath = relative_path(path)?;
             // Validate that the path is not already included by another

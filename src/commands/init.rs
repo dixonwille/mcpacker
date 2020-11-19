@@ -35,11 +35,11 @@ impl InitParams {
         man.mod_loader = self.loader.clone();
         match &self.name {
             Some(s) => man.name = s.clone(),
-            None => man.name = prompt_for_string("Pack Name")?,
+            None => man.name = prompt_for_string("Pack Name"),
         };
         match &self.author {
             Some(s) => man.author = s.clone(),
-            None => man.author = prompt_for_string("Pack Author")?,
+            None => man.author = prompt_for_string("Pack Author"),
         };
         match &self.version {
             Some(s) => man.version = s.clone(),
@@ -75,18 +75,18 @@ impl InitParams {
     }
 }
 
-fn prompt_for_string(prompt: &str) -> Result<String> {
+fn prompt_for_string(prompt: &str) -> String {
     let mut s = String::new();
-    write!(stdout(), "{}: ", prompt)?;
-    stdout().flush()?;
-    let _ = stdin().read_line(&mut s)?;
+    write!(stdout(), "{}: ", prompt).expect("could not write to prompt");
+    stdout().flush().expect("could not flush to prompt");
+    let _ = stdin().read_line(&mut s).expect("could not read line");
     if let Some('\n') = s.chars().next_back() {
         let _ = s.pop();
     }
     if let Some('\r') = s.chars().next_back() {
         let _ = s.pop();
     }
-    Ok(s)
+    s
 }
 
 fn prompt_for_version(prompt: &str, retries: u8) -> Result<Version> {
@@ -96,25 +96,19 @@ fn prompt_for_version(prompt: &str, retries: u8) -> Result<Version> {
         if cur != 0 {
             eprintln!(" please retry");
         }
-        match prompt_for_string(prompt) {
-            Ok(resp) => match Version::parse(&resp) {
-                Ok(ver) => return Ok(ver),
-                Err(e) => {
-                    eprint!("not a valid version");
-                    last_err = Some(e.into());
-                }
-            },
+        match Version::parse(&prompt_for_string(prompt)) {
+            Ok(ver) => return Ok(ver),
             Err(e) => {
-                eprint!("unable to read line");
+                eprint!("not a valid version");
                 last_err = Some(e);
             }
-        }
+        };
         cur = cur + 1;
     }
     match last_err {
         Some(e) => {
             eprintln!(" too many attempts");
-            Err(e)
+            Err(anyhow::Error::new(e).context("not a valid version"))
         }
         None => Ok(Version::new(0, 0, 0)),
     }

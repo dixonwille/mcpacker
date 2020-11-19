@@ -6,7 +6,7 @@ use crate::{
     },
     utils::{murmur2::murmurhash2_32, twitch_api::TwitchAPI},
 };
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use once_cell::sync::Lazy;
 use std::{
     path::{Path, PathBuf},
@@ -41,9 +41,11 @@ impl SyncParams {
 async fn sync_mod_jars(manifest: Manifest) -> Result<()> {
     let mut tasks = Vec::new();
     if MODS_DIR.is_dir() {
-        let mut file_stream = fs::read_dir(Lazy::force(&MODS_DIR)).await?;
+        let mut file_stream = fs::read_dir(Lazy::force(&MODS_DIR))
+            .await
+            .with_context(|| format!("could not read directory {}", MODS_DIR.to_string_lossy()))?;
         while let Some(file) = file_stream.next().await {
-            let file = file?;
+            let file = file.with_context(|| format!("could not get information for entry"))?;
             let file_path = file.path();
             if file_path.is_dir() {
                 continue;
@@ -56,7 +58,9 @@ async fn sync_mod_jars(manifest: Manifest) -> Result<()> {
             let m = manifest.get_mod_by_filename(&jar.file_name().unwrap().to_string_lossy());
             match m {
                 Some(m) => tasks.push(task::spawn(verify_file(
-                    fs::File::open(file_path).await?,
+                    fs::File::open(&file_path).await.with_context(|| {
+                        format!("could not read file {}", file_path.to_string_lossy())
+                    })?,
                     m.clone(),
                 ))),
                 None => {
@@ -101,7 +105,7 @@ async fn sync_mod_jars(manifest: Manifest) -> Result<()> {
         };
     }
     if was_error {
-        return Err(io::Error::new(io::ErrorKind::Other, "there was an error syncing mods").into());
+        return Err(anyhow!("there was an error syncing mods"));
     }
     Ok(())
 }
@@ -111,30 +115,25 @@ async fn verify_file(mut file: fs::File, module: Mod) -> Result<()> {
     // Get file contents into memory to get the length and hash.
     // Hash function used does not support streaming bytes to it.
     // Otherwise, it is best to read chunks at a time instead of all in memory.
-    let l = file.read_to_end(&mut buf).await?;
+    let l = file
+        .read_to_end(&mut buf)
+        .await
+        .with_context(|| "could not read file into memory")?;
     if l as u64 != module.file_size {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "{} is not valid, expected length {} got {}",
-                module.file_name, module.file_size, l
-            ),
-        )
-        .into());
+        return Err(anyhow!(format!(
+            "{} is not valid, expected length {} got {}",
+            module.file_name, module.file_size, l
+        )));
     }
     // Compute the hash using the original Murmur2 32 bit algorithm.
     // This hash function does not support streaming bytes so we need the full buff.
     buf.retain(is_not_whitespace);
     let h = murmurhash2_32(buf.as_ref(), 1);
     if h != module.fingerprint {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!(
-                "{} is not valid, expected {} got {}",
-                module.file_name, module.fingerprint, h
-            ),
-        )
-        .into());
+        return Err(anyhow!(format!(
+            "{} is not valid, expected hash {} got {}",
+            module.file_name, module.fingerprint, h
+        )));
     }
     Ok(())
 }
@@ -145,7 +144,9 @@ fn is_not_whitespace(b: &u8) -> bool {
 }
 
 async fn remove_file(orig: PathBuf) -> Result<()> {
-    Ok(fs::remove_file(orig).await?)
+    Ok(fs::remove_file(&orig)
+        .await
+        .with_context(|| format!("could not remove file {}", orig.to_string_lossy()))?)
 }
 
 async fn download_mod(twitch: Arc<TwitchAPI>, module: Mod) -> Result<()> {
@@ -158,14 +159,18 @@ async fn download_mod(twitch: Arc<TwitchAPI>, module: Mod) -> Result<()> {
         .read(true)
         .write(true)
         .open(&path)
-        .await?;
+        .await
+        .with_context(|| format!("could not open/create file {}", path.to_string_lossy()))?;
     let mut w = io::BufWriter::new(f);
     twitch
         .download(module.project_id, module.file_id, &mut w)
         .await?;
     w.flush().await?;
     let mut f = w.into_inner();
-    let _ = f.seek(io::SeekFrom::Start(0)).await?; // Need to make sure we start at the beginning of the file
+    let _ = f
+        .seek(io::SeekFrom::Start(0))
+        .await
+        .with_context(|| format!("could not seek to beginning of {}", path.to_string_lossy()))?; // Need to make sure we start at the beginning of the file
     verify_file(f, module).await
 }
 

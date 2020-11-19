@@ -1,5 +1,5 @@
 use crate::files::manifest::{Manifest, Mod};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use once_cell::sync::Lazy;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -9,7 +9,7 @@ pub static MANIFEST_JSON_FILE: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("manif
 
 const MANIFEST_VERSION: u8 = 1;
 const MANIFEST_TYPE: &str = "minecraftModpack";
-pub const MANIFEST_OVERRIDES_FOLDER: &str = "overrides";
+pub const MANIFEST_OVERRIDES_FOLDER: Lazy<PathBuf> = Lazy::new(|| PathBuf::from("overrides"));
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -26,7 +26,8 @@ pub struct ManifestJson {
 
 impl ManifestJson {
     pub fn to_writer<W: Write>(&self, writer: W) -> Result<()> {
-        serde_json::to_writer(writer, &self).map_err(|e| e.into())
+        serde_json::to_writer(writer, &self)
+            .with_context(|| "could not serialize from MinecrafJson")
     }
 
     pub fn add_file(&mut self, file: FileJson) -> bool {
@@ -47,7 +48,7 @@ impl From<&Manifest> for ManifestJson {
         let mut mj = ManifestJson {
             manifest_type: MANIFEST_TYPE.to_string(),
             manifest_version: MANIFEST_VERSION,
-            overrides: MANIFEST_OVERRIDES_FOLDER.to_string(),
+            overrides: MANIFEST_OVERRIDES_FOLDER.to_string_lossy().into(),
             files: None,
             name: m.name.clone(),
             version: m.version.clone(),

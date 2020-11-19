@@ -2,7 +2,7 @@ use crate::{
     files::minecraft_instance::{InstalledAddon, MinecraftInstance},
     utils::compare::{compare, Side},
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use once_cell::sync::Lazy;
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -25,11 +25,25 @@ fn clean_path(p: impl AsRef<Path>) -> PathBuf {
 fn clean_path(p: impl AsRef<Path>) -> PathBuf {}
 
 pub fn get_manifest() -> Result<Manifest> {
-    Manifest::from_reader(BufReader::new(File::open(Lazy::force(&MANIFEST_FILE))?))
+    Manifest::from_reader(BufReader::new(
+        File::open(Lazy::force(&MANIFEST_FILE)).with_context(|| {
+            format!(
+                "could not open {} for reading",
+                MANIFEST_FILE.to_string_lossy()
+            )
+        })?,
+    ))
 }
 
 pub fn create_manifest_file() -> Result<BufWriter<File>> {
-    Ok(BufWriter::new(File::create(Lazy::force(&MANIFEST_FILE))?))
+    Ok(BufWriter::new(
+        File::create(Lazy::force(&MANIFEST_FILE)).with_context(|| {
+            format!(
+                "could not open {} for writing",
+                MANIFEST_FILE.to_string_lossy()
+            )
+        })?,
+    ))
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -47,11 +61,12 @@ pub struct Manifest {
 
 impl Manifest {
     pub fn from_reader<R: Read>(reader: R) -> Result<Self> {
-        serde_yaml::from_reader(reader).map_err(|e| e.into())
+        serde_yaml::from_reader(reader).with_context(|| "could not deserialize into Manifest")
     }
 
     pub fn to_writer<W: Write>(&self, writer: W) -> Result<()> {
-        serde_yaml::to_writer(writer, &self).map_err(|e| e.into())
+        serde_yaml::to_writer(writer, &self)
+            .with_context(|| "could not serialize from MinecraftInstance")
     }
 
     pub fn get_mods(&self) -> Option<&BTreeSet<Mod>> {

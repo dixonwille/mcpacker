@@ -1,8 +1,11 @@
-use crate::files::manifest::{create_manifest_file, get_manifest, Manifest, MANIFEST_FILE};
-use anyhow::Result;
+use crate::files::{
+    manifest::{create_manifest_file, get_manifest, Manifest, MANIFEST_FILE},
+    CWD,
+};
+use anyhow::{anyhow, Context, Result};
 use git2::{ObjectType, Repository, RepositoryState};
+use once_cell::sync::Lazy;
 use semver::{Identifier, Version};
-use std::{env, io};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -93,35 +96,46 @@ impl BumpParams {
         }
         manifest.to_writer(create_manifest_file()?)?;
         if git {
-            let repo = Repository::open(env::current_dir()?)?;
+            let repo = Repository::open(Lazy::force(&CWD))?;
             // Make sure the repo is in a clean state (not in the middle of rebase or merge)
             if repo.state() != RepositoryState::Clean {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    "repository is not in a clean state",
-                )
-                .into());
+                return Err(anyhow!("repository is not in a clean state"));
             }
             // Stage the manifest file on top of any currently staged objects.
-            let mut idx = repo.index()?;
-            idx.add_path(&MANIFEST_FILE)?;
-            let tree = idx.write_tree()?;
-            idx.write()?;
+            let mut idx = repo.index().expect("git repository should have an index");
+            idx.add_path(&MANIFEST_FILE)
+                .expect("could not add file we just wrote to disk to add to repository");
+            let tree = idx.write_tree().unwrap();
+            idx.write().unwrap();
             // Commit the staged objects
-            let tree = repo.find_tree(tree)?;
-            let sig = repo.signature()?;
-            let head = repo.head()?.peel_to_commit()?;
-            let commit = repo.commit(
-                Some("HEAD"),
-                &sig,
-                &sig,
-                &format!("update to version {}", manifest.version),
-                &tree,
-                &[&head],
-            )?;
-            let commit_object = repo.find_object(commit, Some(ObjectType::Commit))?;
+            let tree = repo
+                .find_tree(tree)
+                .expect("could not find tree we just wrote");
+            let sig = repo
+                .signature()
+                .with_context(|| "gitconfig needs to be setup with user.name and user.email")?;
+            let head = repo
+                .head()
+                .expect("could not find where HEAD is in repository")
+                .peel_to_commit()
+                .expect("HEAD should be pointing to a commit");
+            let commit = repo
+                .commit(
+                    Some("HEAD"),
+                    &sig,
+                    &sig,
+                    &format!("update to version {}", manifest.version),
+                    &tree,
+                    &[&head],
+                )
+                .with_context(|| "HEAD should be on the tip of a branch")?;
+            let commit_object = repo
+                .find_object(commit, Some(ObjectType::Commit))
+                .expect("could not find commit we just created");
             // Tag the commit that was just created
-            let _ = repo.tag_lightweight(&manifest.version.to_string(), &commit_object, true)?;
+            let _ = repo
+                .tag_lightweight(&manifest.version.to_string(), &commit_object, true)
+                .expect("could not tag the commit we just created");
         }
         Ok(())
     }

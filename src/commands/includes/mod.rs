@@ -3,7 +3,7 @@ mod remove;
 
 use crate::files::CWD;
 use add::Add;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use remove::Remove;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -27,6 +27,15 @@ impl Include {
 }
 
 fn relative_path(p: &PathBuf) -> Result<PathBuf> {
-    let abs = p.canonicalize()?;
-    Ok((abs.strip_prefix(CWD.as_path())?).to_path_buf())
+    let abs = p
+        .canonicalize()
+        .with_context(|| format!("could not normalize {}", p.to_string_lossy()))?;
+    Ok((abs.strip_prefix(CWD.as_path()).with_context(|| {
+        format!(
+            "{} is not in {}",
+            p.to_string_lossy(),
+            CWD.to_string_lossy()
+        )
+    })?)
+    .to_path_buf())
 }

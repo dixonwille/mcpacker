@@ -1,5 +1,5 @@
 use crate::files::manifest_json::ManifestJson;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use once_cell::sync::Lazy;
 use semver::Version;
 use serde::Deserialize;
@@ -13,9 +13,14 @@ pub static MINECRAFT_INSTANCE_FILE: Lazy<PathBuf> =
     Lazy::new(|| PathBuf::from("minecraftinstance.json"));
 
 pub fn get_minecraft_instance() -> Result<MinecraftInstance> {
-    MinecraftInstance::from_reader(BufReader::new(File::open(Lazy::force(
-        &MINECRAFT_INSTANCE_FILE,
-    ))?))
+    MinecraftInstance::from_reader(BufReader::new(
+        File::open(Lazy::force(&MINECRAFT_INSTANCE_FILE)).with_context(|| {
+            format!(
+                "could not open {} for reading",
+                MINECRAFT_INSTANCE_FILE.to_string_lossy()
+            )
+        })?,
+    ))
 }
 
 #[derive(Deserialize, Debug)]
@@ -31,7 +36,8 @@ pub struct MinecraftInstance {
 
 impl MinecraftInstance {
     pub fn from_reader<R: Read>(reader: R) -> Result<Self> {
-        serde_json::from_reader(reader).map_err(|e| e.into())
+        serde_json::from_reader(reader)
+            .with_context(|| "could not deserialize into MinecraftInstance")
     }
 }
 
