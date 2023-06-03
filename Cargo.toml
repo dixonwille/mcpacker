@@ -36,7 +36,7 @@ default-features = false
 features = ["serde"]
 
 [dependencies.git2]
-version = "0.13"
+version = "0.16"
 default-features = false
 
 # TODO figure out what is needed here
